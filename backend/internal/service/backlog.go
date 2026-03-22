@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -14,6 +15,10 @@ import (
 const (
 	backlogAPITimeout = 30 * time.Second
 	issuesPerPage     = 100
+
+	priorityHighID   = 2
+	priorityMediumID = 3
+	priorityLowID    = 4
 )
 
 type BacklogClient struct {
@@ -29,10 +34,10 @@ func NewBacklogClient() *BacklogClient {
 }
 
 type backlogIssue struct {
-	ID        int    `json:"id"`
-	IssueKey  string `json:"issueKey"`
-	Summary   string `json:"summary"`
-	Priority  struct {
+	ID       int    `json:"id"`
+	IssueKey string `json:"issueKey"`
+	Summary  string `json:"summary"`
+	Priority struct {
 		ID   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"priority"`
@@ -43,21 +48,22 @@ type backlogIssue struct {
 		Name string `json:"name"`
 	} `json:"status"`
 	Milestone []struct {
-		ID      int     `json:"id"`
-		Name    string  `json:"name"`
-		Date    *string `json:"date"`
+		ID   int     `json:"id"`
+		Name string  `json:"name"`
+		Date *string `json:"date"`
 	} `json:"milestone"`
 	Description string `json:"description"`
 }
 
 func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string) ([]model.Task, error) {
-	url := fmt.Sprintf("https://%s/api/v2/issues?apiKey=%s&count=%d&statusId[]=1&statusId[]=2&statusId[]=3",
-		space.Domain, apiKey, issuesPerPage)
+	url := fmt.Sprintf("https://%s/api/v2/issues?count=%d&statusId[]=1&statusId[]=2&statusId[]=3",
+		space.Domain, issuesPerPage)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("backlog request create: %w", err)
 	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -92,14 +98,20 @@ func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpac
 		}
 
 		if issue.DueDate != nil {
-			if t, err := time.Parse("2006-01-02T15:04:05Z", *issue.DueDate); err == nil {
+			t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.DueDate)
+			if parseErr != nil {
+				log.Printf("warn: failed to parse dueDate for %s: %v", issue.IssueKey, parseErr)
+			} else {
 				task.DueDate = &t
 			}
 		}
 
 		if len(issue.Milestone) > 0 && issue.Milestone[0].Date != nil {
 			task.MilestoneID = fmt.Sprintf("%d", issue.Milestone[0].ID)
-			if t, err := time.Parse("2006-01-02T15:04:05Z", *issue.Milestone[0].Date); err == nil {
+			t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.Milestone[0].Date)
+			if parseErr != nil {
+				log.Printf("warn: failed to parse milestone date for %s: %v", issue.IssueKey, parseErr)
+			} else {
 				task.MilestoneDueDate = &t
 			}
 		}
@@ -131,8 +143,8 @@ func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.Backl
 				return
 			}
 
-			tasks, err := c.FetchIssues(ctx, sp, apiKey)
-			results[idx] = SyncResult{SpaceID: sp.ID, Tasks: tasks, Err: err}
+			tasks, fetchErr := c.FetchIssues(ctx, sp, apiKey)
+			results[idx] = SyncResult{SpaceID: sp.ID, Tasks: tasks, Err: fetchErr}
 		}(i, space)
 	}
 
@@ -142,11 +154,11 @@ func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.Backl
 
 func mapPriority(id int) string {
 	switch id {
-	case 2:
+	case priorityHighID:
 		return "高"
-	case 3:
+	case priorityMediumID:
 		return "中"
-	case 4:
+	case priorityLowID:
 		return "低"
 	default:
 		return "中"

@@ -67,10 +67,8 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 			continue
 		}
 
-		for i := range result.Tasks {
-			h.db.Where("issue_key = ?", result.Tasks[i].IssueKey).
-				Assign(result.Tasks[i]).
-				FirstOrCreate(&result.Tasks[i])
+		if len(result.Tasks) > 0 {
+			h.db.Save(&result.Tasks)
 		}
 
 		space := spaceMap[result.SpaceID]
