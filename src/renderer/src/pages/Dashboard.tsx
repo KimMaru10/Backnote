@@ -16,6 +16,7 @@ function Dashboard(): JSX.Element {
   const [tasks, setTasks] = useState<Task[]>([])
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
 
@@ -24,8 +25,10 @@ function Dashboard(): JSX.Element {
       const res = await fetch(`${backendUrl}/api/tasks`)
       const data = await res.json()
       setTasks(data)
+      setError(null)
     } catch (_err: unknown) {
       setTasks([])
+      setError('タスクの取得に失敗しました。バックエンドが起動しているか確認してください。')
     }
   }
 
@@ -35,19 +38,23 @@ function Dashboard(): JSX.Element {
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
     } catch (_err: unknown) {
-      // バックエンド未起動時は無視
+      // バックエンド未起動時は初回のみ無視（fetchTasksでエラー表示）
     }
   }
 
   const handleSync = async (): Promise<void> => {
     setSyncing(true)
+    setError(null)
     try {
       const res = await fetch(`${backendUrl}/api/sync`, { method: 'POST' })
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
+      if (data.errors && data.errors.length > 0) {
+        setError(`同期エラー: ${data.errors.join(', ')}`)
+      }
       await fetchTasks()
     } catch (_err: unknown) {
-      // エラー時は何もしない
+      setError('同期に失敗しました。バックエンドが起動しているか確認してください。')
     } finally {
       setSyncing(false)
     }
@@ -96,6 +103,12 @@ function Dashboard(): JSX.Element {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       {tasks.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">

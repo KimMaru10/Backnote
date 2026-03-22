@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/KimMaru10/PeelTask/backend/internal/model"
@@ -47,6 +48,7 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 func (h *SyncHandler) GetTasks(c echo.Context) error {
 	var tasks []model.Task
 	if err := h.db.Preload(clause.Associations).Order("score DESC").Find(&tasks).Error; err != nil {
+		log.Printf("error: failed to fetch tasks: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch tasks",
 		})

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync/atomic"
 	"time"
@@ -10,7 +11,11 @@ import (
 	"gorm.io/gorm"
 )
 
-const syncInterval = 15 * time.Minute
+const (
+	syncInterval       = 15 * time.Minute
+	syncTimeout        = 2 * time.Minute
+	initialSyncDelay   = 3 * time.Second
+)
 
 type Syncer struct {
 	db            *gorm.DB
@@ -29,7 +34,12 @@ func NewSyncer(db *gorm.DB, backlogClient *BacklogClient) *Syncer {
 
 func (s *Syncer) Start() {
 	go func() {
-		s.runSync()
+		select {
+		case <-time.After(initialSyncDelay):
+			s.runSync()
+		case <-s.stopCh:
+			return
+		}
 
 		ticker := time.NewTicker(syncInterval)
 		defer ticker.Stop()
@@ -54,7 +64,10 @@ func (s *Syncer) LastSyncedAt() *time.Time {
 	if v == nil {
 		return nil
 	}
-	t := v.(time.Time)
+	t, ok := v.(time.Time)
+	if !ok {
+		return nil
+	}
 	return &t
 }
 
@@ -63,7 +76,7 @@ func (s *Syncer) RunManualSync() (int, []string) {
 }
 
 func (s *Syncer) runSync() (int, []string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
 
 	var spaces []model.BacklogSpace
@@ -93,7 +106,11 @@ func (s *Syncer) runSync() (int, []string) {
 		}
 
 		if len(result.Tasks) > 0 {
-			s.db.Save(&result.Tasks)
+			if err := s.db.Save(&result.Tasks).Error; err != nil {
+				log.Printf("error: failed to save tasks for space %d: %v", result.SpaceID, err)
+				errs = append(errs, fmt.Sprintf("DB save error (space %d): %v", result.SpaceID, err))
+				continue
+			}
 		}
 
 		totalTasks += len(result.Tasks)
