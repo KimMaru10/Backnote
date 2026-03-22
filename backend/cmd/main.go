@@ -43,11 +43,17 @@ func main() {
 
 	healthHandler := handler.NewHealthHandler()
 	syncHandler := handler.NewSyncHandler(db, backlogClient)
+	spaceHandler := handler.NewSpaceHandler(db)
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
 	api.POST("/sync", syncHandler.Sync)
 	api.GET("/tasks", syncHandler.GetTasks)
+	api.GET("/spaces", spaceHandler.List)
+	api.POST("/spaces", spaceHandler.Create)
+	api.PUT("/spaces/:id", spaceHandler.Update)
+	api.DELETE("/spaces/:id", spaceHandler.Delete)
+	api.POST("/spaces/test", spaceHandler.TestConnection)
 
 	log.Printf("PeelTask backend starting on :%s", port)
 	if err := e.Start(":" + port); err != nil {
