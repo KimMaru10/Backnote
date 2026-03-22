@@ -30,6 +30,9 @@ func main() {
 	}
 
 	backlogClient := service.NewBacklogClient()
+	syncer := service.NewSyncer(db, backlogClient)
+	syncer.Start()
+	defer syncer.Stop()
 
 	port := os.Getenv("PEELTASK_PORT")
 	if port == "" {
@@ -42,13 +45,14 @@ func main() {
 	e.Use(middleware.CORS())
 
 	healthHandler := handler.NewHealthHandler()
-	syncHandler := handler.NewSyncHandler(db, backlogClient)
+	syncHandler := handler.NewSyncHandler(db, syncer)
 	spaceHandler := handler.NewSpaceHandler(db)
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
 	api.POST("/sync", syncHandler.Sync)
 	api.GET("/tasks", syncHandler.GetTasks)
+	api.GET("/sync/status", syncHandler.GetSyncStatus)
 	api.GET("/spaces", spaceHandler.List)
 	api.POST("/spaces", spaceHandler.Create)
 	api.PUT("/spaces/:id", spaceHandler.Update)
