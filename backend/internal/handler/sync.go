@@ -11,73 +11,34 @@ import (
 )
 
 type SyncHandler struct {
-	db            *gorm.DB
-	backlogClient *service.BacklogClient
+	db     *gorm.DB
+	syncer *service.Syncer
 }
 
-func NewSyncHandler(db *gorm.DB, backlogClient *service.BacklogClient) *SyncHandler {
+func NewSyncHandler(db *gorm.DB, syncer *service.Syncer) *SyncHandler {
 	return &SyncHandler{
-		db:            db,
-		backlogClient: backlogClient,
+		db:     db,
+		syncer: syncer,
 	}
 }
 
 type syncResponse struct {
-	TotalTasks int            `json:"totalTasks"`
-	Spaces     []spaceResult  `json:"spaces"`
-	Errors     []string       `json:"errors,omitempty"`
-}
-
-type spaceResult struct {
-	SpaceID     uint   `json:"spaceId"`
-	DisplayName string `json:"displayName"`
-	TaskCount   int    `json:"taskCount"`
+	TotalTasks   int      `json:"totalTasks"`
+	Errors       []string `json:"errors,omitempty"`
+	LastSyncedAt *string  `json:"lastSyncedAt,omitempty"`
 }
 
 func (h *SyncHandler) Sync(c echo.Context) error {
-	ctx := c.Request().Context()
+	totalTasks, errs := h.syncer.RunManualSync()
 
-	var spaces []model.BacklogSpace
-	if err := h.db.Where("is_active = ?", true).Find(&spaces).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "failed to fetch spaces",
-		})
+	resp := syncResponse{
+		TotalTasks: totalTasks,
+		Errors:     errs,
 	}
 
-	if len(spaces) == 0 {
-		return c.JSON(http.StatusOK, syncResponse{TotalTasks: 0})
-	}
-
-	apiKeys := make(map[uint]string, len(spaces))
-	for _, space := range spaces {
-		apiKeys[space.ID] = space.ApiKeyRef
-	}
-
-	results := h.backlogClient.FetchAllSpaces(ctx, spaces, apiKeys)
-
-	resp := syncResponse{}
-	spaceMap := make(map[uint]model.BacklogSpace, len(spaces))
-	for _, space := range spaces {
-		spaceMap[space.ID] = space
-	}
-
-	for _, result := range results {
-		if result.Err != nil {
-			resp.Errors = append(resp.Errors, result.Err.Error())
-			continue
-		}
-
-		if len(result.Tasks) > 0 {
-			h.db.Save(&result.Tasks)
-		}
-
-		space := spaceMap[result.SpaceID]
-		resp.Spaces = append(resp.Spaces, spaceResult{
-			SpaceID:     result.SpaceID,
-			DisplayName: space.DisplayName,
-			TaskCount:   len(result.Tasks),
-		})
-		resp.TotalTasks += len(result.Tasks)
+	if t := h.syncer.LastSyncedAt(); t != nil {
+		formatted := t.Format("2006-01-02T15:04:05Z07:00")
+		resp.LastSyncedAt = &formatted
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -90,6 +51,15 @@ func (h *SyncHandler) GetTasks(c echo.Context) error {
 			"error": "failed to fetch tasks",
 		})
 	}
-
 	return c.JSON(http.StatusOK, tasks)
+}
+
+func (h *SyncHandler) GetSyncStatus(c echo.Context) error {
+	resp := map[string]interface{}{
+		"lastSyncedAt": nil,
+	}
+	if t := h.syncer.LastSyncedAt(); t != nil {
+		resp["lastSyncedAt"] = t.Format("2006-01-02T15:04:05Z07:00")
+	}
+	return c.JSON(http.StatusOK, resp)
 }
