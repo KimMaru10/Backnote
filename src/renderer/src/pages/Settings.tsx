@@ -27,7 +27,7 @@ function Settings(): JSX.Element {
   const [testResult, setTestResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const backendUrl = window.api.getBackendUrl()
+  const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
 
   const fetchSpaces = async (): Promise<void> => {
     try {
