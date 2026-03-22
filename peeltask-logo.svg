@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 80 80">
+  <!-- App icon background -->
+  <rect x="8" y="8" width="64" height="64" rx="16" fill="#FAC775"/>
+  <!-- Peel corner (top-right fold) -->
+  <path d="M46 20 L46 38 L30 20 Z" fill="#fff" opacity="0.9"/>
+  <!-- P letter -->
+  <text x="22" y="62" font-size="28" font-weight="700" fill="#BA7517" font-family="sans-serif">P</text>
+</svg>

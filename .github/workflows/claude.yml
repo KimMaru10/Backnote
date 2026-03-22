@@ -1,0 +1,130 @@
+name: Claude PR Assistant
+
+on:
+  # @claude メンションに反応するためのトリガー
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+  # プルリクエストの自動レビュー用トリガー
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+  # 月次脆弱性診断用トリガー (cron形式)
+  schedule:
+    # 毎月1日のUTC 0:00 (JST 9:00) に実行
+    - cron: "0 0 1 * *"
+
+jobs:
+  # -------------------------------------------------------
+  # Job 1: PRが作成・更新されたとき、自動でレビューを依頼する
+  # -------------------------------------------------------
+  auto-pr-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Add auto review comment as user
+        uses: actions/github-script@v7
+        with:
+          # ⚠️ GITHUB_TOKEN ではなく USER_PAT を使う
+          # 理由: GitHub ActionsのBotコメントには @claude が反応しないため、
+          #       人間(ユーザー)によるコメントに見せる必要がある
+          github-token: ${{ secrets.USER_PAT }}
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '@claude このプルリクエストをレビューしてください。'
+            });
+
+  # -------------------------------------------------------
+  # Job 2: 月次で脆弱性診断のIssueを自動作成する
+  # -------------------------------------------------------
+  auto-vulnerability-scan:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Create vulnerability scan issue as user
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.USER_PAT }}
+          script: |
+            const now = new Date();
+            const jstTime = now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `【自動実行】月次脆弱性診断レポート (${now.getFullYear()}/${now.getMonth() + 1})`,
+              body: [
+                '@claude 定期脆弱性診断を実行してください。',
+                '',
+                `## 実行日時`,
+                jstTime,
+                '',
+                '## Vulnerability Scan Guidelines（脆弱性診断の指針）',
+                '',
+                'OWASP Top 10 の観点を中心に、ソースコード全体の脆弱性を診断してください。',
+                '',
+                '### チェック観点',
+                '1. インジェクション（SQLi, XSS, コマンドインジェクション）',
+                '2. 認証・認可の不備',
+                '3. 機密データの露出（APIキー、パスワードのハードコード等）',
+                '4. セキュリティの設定ミス',
+                '5. 既知の脆弱性を持つライブラリの使用',
+                '',
+                '### ⚠️ 必須キーワード（ChatWork通知の判定に使用）',
+                '',
+                '**結果サマリー（どちらか一方を必ず記載）:**',
+                '- 脆弱性あり → `VULNERABILITY_SCAN_RESULT: ISSUES_FOUND`',
+                '- 問題なし → `VULNERABILITY_SCAN_RESULT: CLEAN`',
+                '',
+                '**重要度（該当する場合のみ記載）:**',
+                '- `SEVERITY: CRITICAL`（緊急対応が必要な脆弱性）',
+                '- `SEVERITY: HIGH`（優先度の高い脆弱性）',
+                '',
+                '診断結果はこのIssueにコメントで追記してください。'
+              ].join('\n'),
+              labels: ['security', 'vulnerability-scan', 'automated']
+            });
+
+  # -------------------------------------------------------
+  # Job 3: @claude メンションを検知してClaudeを起動する
+  # -------------------------------------------------------
+  claude-code-action:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Action
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          timeout_minutes: "60"
