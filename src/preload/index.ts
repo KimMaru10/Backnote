@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-const api = {}
+const api = {
+  getBackendUrl: (): string => 'http://localhost:8080'
+}
 
 if (process.contextIsolated) {
   try {

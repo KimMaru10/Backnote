@@ -1,5 +1,8 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { startBackend, stopBackend } from './backend'
+
+const BACKEND_PORT = 8080
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -32,12 +35,22 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  try {
+    await startBackend(BACKEND_PORT)
+  } catch (err) {
+    console.error('[main] Failed to start backend:', err)
+  }
+
   createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  stopBackend()
 })
 
 app.on('window-all-closed', () => {
