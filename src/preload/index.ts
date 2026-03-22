@@ -1,7 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
-  getBackendUrl: (): string => 'http://localhost:8080'
+  getBackendUrl: (): string => {
+    return `http://localhost:${ipcRenderer.sendSync('get-backend-port')}`
+  }
 }
 
 if (process.contextIsolated) {

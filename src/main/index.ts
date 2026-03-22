@@ -1,8 +1,6 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
-import { startBackend, stopBackend } from './backend'
-
-const BACKEND_PORT = 8080
+import { startBackend, stopBackend, BACKEND_PORT } from './backend'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -35,11 +33,15 @@ function createWindow(): void {
   }
 }
 
+ipcMain.on('get-backend-port', (event) => {
+  event.returnValue = BACKEND_PORT
+})
+
 app.whenReady().then(async () => {
   try {
-    await startBackend(BACKEND_PORT)
+    await startBackend()
   } catch (err) {
-    console.error('[main] Failed to start backend:', err)
+    // バックエンド起動失敗時もUIは表示する
   }
 
   createWindow()
