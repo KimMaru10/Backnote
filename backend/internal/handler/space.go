@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -19,10 +20,17 @@ func NewSpaceHandler(db *gorm.DB) *SpaceHandler {
 }
 
 type createSpaceRequest struct {
-	Domain      string `json:"domain" validate:"required"`
-	ApiKeyRef   string `json:"apiKeyRef" validate:"required"`
+	Domain      string `json:"domain"`
+	ApiKeyRef   string `json:"apiKeyRef"`
 	Color       string `json:"color"`
-	DisplayName string `json:"displayName" validate:"required"`
+	DisplayName string `json:"displayName"`
+}
+
+type updateSpaceRequest struct {
+	Domain      string `json:"domain"`
+	ApiKeyRef   string `json:"apiKeyRef"`
+	Color       string `json:"color"`
+	DisplayName string `json:"displayName"`
 }
 
 func (h *SpaceHandler) List(c echo.Context) error {
@@ -75,12 +83,17 @@ func (h *SpaceHandler) Update(c echo.Context) error {
 
 	var space model.BacklogSpace
 	if err := h.db.First(&space, id).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "space not found",
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "space not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch space",
 		})
 	}
 
-	var req createSpaceRequest
+	var req updateSpaceRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "invalid request body",
@@ -112,9 +125,15 @@ func (h *SpaceHandler) Update(c echo.Context) error {
 func (h *SpaceHandler) Delete(c echo.Context) error {
 	id := c.Param("id")
 
-	if err := h.db.Delete(&model.BacklogSpace{}, id).Error; err != nil {
+	result := h.db.Delete(&model.BacklogSpace{}, id)
+	if result.Error != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to delete space",
+		})
+	}
+	if result.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "space not found",
 		})
 	}
 
@@ -148,7 +167,7 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	url := fmt.Sprintf("https://%s/api/v2/space?apiKey=%s", req.Domain, req.ApiKey)
+	url := fmt.Sprintf("https://%s/api/v2/space", req.Domain)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -157,6 +176,7 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 			Error:   "リクエスト作成に失敗しました",
 		})
 	}
+	httpReq.Header.Set("X-Backlog-Api-Key", req.ApiKey)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(httpReq)

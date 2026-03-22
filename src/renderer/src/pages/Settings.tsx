@@ -100,8 +100,17 @@ function Settings(): JSX.Element {
   }
 
   const handleDelete = async (id: number): Promise<void> => {
-    await fetch(`${backendUrl}/api/spaces/${id}`, { method: 'DELETE' })
-    await fetchSpaces()
+    if (!window.confirm('このスペースを削除しますか？')) return
+    try {
+      const res = await fetch(`${backendUrl}/api/spaces/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setTestResult('削除に失敗しました')
+        return
+      }
+      await fetchSpaces()
+    } catch (_err: unknown) {
+      setTestResult('削除に失敗しました')
+    }
   }
 
   const handleCancel = (): void => {
