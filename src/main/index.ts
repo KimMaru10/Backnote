@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { startBackend, stopBackend, BACKEND_PORT } from './backend'
 
@@ -41,7 +41,10 @@ app.whenReady().then(async () => {
   try {
     await startBackend()
   } catch (err) {
-    // バックエンド起動失敗時もUIは表示する
+    dialog.showErrorBox(
+      'PeelTask Backend Error',
+      `バックエンドの起動に失敗しました: ${err instanceof Error ? err.message : String(err)}`
+    )
   }
 
   createWindow()

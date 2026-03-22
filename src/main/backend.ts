@@ -1,8 +1,8 @@
 import { ChildProcess, spawn } from 'child_process'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import http from 'http'
+import * as http from 'http'
 
 const MAX_HEALTH_CHECK_RETRIES = 30
 const HEALTH_CHECK_INTERVAL_MS = 500
@@ -63,27 +63,32 @@ export async function startBackend(port: number = BACKEND_PORT): Promise<void> {
     throw new Error(`Backend binary not found: ${backendPath}`)
   }
 
-  backendProcess = spawn(backendPath, [], {
-    env: {
-      ...process.env,
-      PEELTASK_PORT: String(port)
-    },
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
+  return new Promise((resolve, reject) => {
+    backendProcess = spawn(backendPath, [], {
+      env: {
+        ...process.env,
+        PEELTASK_PORT: String(port)
+      },
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
 
-  backendProcess.on('error', (err) => {
-    backendProcess = null
-    throw new Error(`Backend spawn failed: ${err.message}`)
-  })
+    backendProcess.on('error', (err) => {
+      backendProcess = null
+      reject(new Error(`Backend spawn failed: ${err.message}`))
+    })
 
-  backendProcess.on('exit', (code) => {
-    backendProcess = null
-    if (code !== 0 && code !== null) {
-      throw new Error(`Backend exited unexpectedly with code ${code}`)
-    }
-  })
+    backendProcess.on('exit', (code) => {
+      backendProcess = null
+      if (code !== 0 && code !== null) {
+        dialog.showErrorBox(
+          'PeelTask Backend Error',
+          `バックエンドが予期せず終了しました (code: ${code})`
+        )
+      }
+    })
 
-  await waitForHealth(port)
+    waitForHealth(port).then(resolve).catch(reject)
+  })
 }
 
 export function stopBackend(): void {
