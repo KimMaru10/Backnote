@@ -18,14 +18,20 @@ func main() {
 	}
 
 	dbDir := filepath.Join(homeDir, ".peeltask")
-	if err := os.MkdirAll(dbDir, 0755); err != nil {
+	if err := os.MkdirAll(dbDir, 0750); err != nil {
 		log.Fatalf("create db dir: %v", err)
 	}
 
 	dbPath := filepath.Join(dbDir, "peeltask.db")
-	_, err = store.NewDatabase(dbPath)
+	db, err := store.NewDatabase(dbPath)
 	if err != nil {
 		log.Fatalf("database init: %v", err)
+	}
+	_ = db // TODO(kim): ハンドラーへのDI実装時に使用 #2
+
+	port := os.Getenv("PEELTASK_PORT")
+	if port == "" {
+		port = "8080"
 	}
 
 	e := echo.New()
@@ -37,8 +43,8 @@ func main() {
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
 
-	log.Println("PeelTask backend starting on :8080")
-	if err := e.Start(":8080"); err != nil {
+	log.Printf("PeelTask backend starting on :%s", port)
+	if err := e.Start(":" + port); err != nil {
 		log.Fatalf("server: %v", err)
 	}
 }
