@@ -1,5 +1,6 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
+import { startBackend, stopBackend, BACKEND_PORT } from './backend'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -32,12 +33,29 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+ipcMain.on('get-backend-port', (event) => {
+  event.returnValue = BACKEND_PORT
+})
+
+app.whenReady().then(async () => {
+  try {
+    await startBackend()
+  } catch (err) {
+    dialog.showErrorBox(
+      'PeelTask Backend Error',
+      `バックエンドの起動に失敗しました: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
+
   createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  stopBackend()
 })
 
 app.on('window-all-closed', () => {
