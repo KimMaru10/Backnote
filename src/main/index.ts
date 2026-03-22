@@ -37,6 +37,8 @@ ipcMain.on('get-backend-port', (event) => {
   event.returnValue = BACKEND_PORT
 })
 
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
+
 app.whenReady().then(async () => {
   try {
     await startBackend()
