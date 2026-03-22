@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/KimMaru10/PeelTask/backend/internal/handler"
+	"github.com/KimMaru10/PeelTask/backend/internal/service"
 	"github.com/KimMaru10/PeelTask/backend/internal/store"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -27,7 +28,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("database init: %v", err)
 	}
-	_ = db // TODO(kim): ハンドラーへのDI実装時に使用 #2 (M2マイルストーンで対応予定)
+
+	backlogClient := service.NewBacklogClient()
 
 	port := os.Getenv("PEELTASK_PORT")
 	if port == "" {
@@ -40,8 +42,12 @@ func main() {
 	e.Use(middleware.CORS())
 
 	healthHandler := handler.NewHealthHandler()
+	syncHandler := handler.NewSyncHandler(db, backlogClient)
+
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
+	api.POST("/sync", syncHandler.Sync)
+	api.GET("/tasks", syncHandler.GetTasks)
 
 	log.Printf("PeelTask backend starting on :%s", port)
 	if err := e.Start(":" + port); err != nil {
