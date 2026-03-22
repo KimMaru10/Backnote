@@ -53,7 +53,7 @@ function Settings(): JSX.Element {
         body: JSON.stringify({ domain: form.domain, apiKey: form.apiKeyRef })
       })
       const data = await res.json()
-      setTestResult(data.success ? 'success' : `failed: ${data.error}`)
+      setTestResult(data.success ? 'success' : (data.error || '不明なエラー'))
     } catch (_err: unknown) {
       setTestResult('failed: connection error')
     } finally {
@@ -227,7 +227,7 @@ function Settings(): JSX.Element {
                   ? 'bg-green-50 text-green-700'
                   : 'bg-red-50 text-red-700'
               }`}>
-                {testResult === 'success' ? '接続成功' : `接続失敗: ${testResult}`}
+                {testResult === 'success' ? '接続成功' : testResult}
               </div>
             )}
 

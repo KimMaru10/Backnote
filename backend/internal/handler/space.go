@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/KimMaru10/PeelTask/backend/internal/model"
 	"github.com/labstack/echo/v4"
@@ -121,34 +123,66 @@ func (h *SpaceHandler) Delete(c echo.Context) error {
 	})
 }
 
+type testConnectionResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
 func (h *SpaceHandler) TestConnection(c echo.Context) error {
 	var req struct {
 		Domain string `json:"domain"`
 		ApiKey string `json:"apiKey"`
 	}
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "invalid request body",
+		return c.JSON(http.StatusBadRequest, testConnectionResponse{
+			Success: false,
+			Error:   "invalid request body",
 		})
 	}
 
-	resp, err := http.Get("https://" + req.Domain + "/api/v2/space?apiKey=" + req.ApiKey)
+	if req.Domain == "" || req.ApiKey == "" {
+		return c.JSON(http.StatusOK, testConnectionResponse{
+			Success: false,
+			Error:   "ドメインとAPIキーを入力してください",
+		})
+	}
+
+	ctx := c.Request().Context()
+	url := fmt.Sprintf("https://%s/api/v2/space?apiKey=%s", req.Domain, req.ApiKey)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return c.JSON(http.StatusOK, map[string]interface{}{
-			"success": false,
-			"error":   "connection failed",
+		return c.JSON(http.StatusOK, testConnectionResponse{
+			Success: false,
+			Error:   "リクエスト作成に失敗しました",
+		})
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return c.JSON(http.StatusOK, testConnectionResponse{
+			Success: false,
+			Error:   fmt.Sprintf("接続に失敗しました: %s", req.Domain),
 		})
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return c.JSON(http.StatusOK, map[string]interface{}{
-			"success": false,
-			"error":   "authentication failed",
+	if resp.StatusCode == http.StatusUnauthorized {
+		return c.JSON(http.StatusOK, testConnectionResponse{
+			Success: false,
+			Error:   "APIキーが無効です",
 		})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"success": true,
+	if resp.StatusCode != http.StatusOK {
+		return c.JSON(http.StatusOK, testConnectionResponse{
+			Success: false,
+			Error:   fmt.Sprintf("APIエラー (status: %d)", resp.StatusCode),
+		})
+	}
+
+	return c.JSON(http.StatusOK, testConnectionResponse{
+		Success: true,
 	})
 }
