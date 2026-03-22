@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("database init: %v", err)
 	}
-	_ = db // TODO(kim): ハンドラーへのDI実装時に使用 #2
+	_ = db // TODO(kim): ハンドラーへのDI実装時に使用 #2 (M2マイルストーンで対応予定)
 
 	port := os.Getenv("PEELTASK_PORT")
 	if port == "" {
