@@ -7,7 +7,10 @@ import (
 	"github.com/KimMaru10/PeelTask/backend/internal/model"
 )
 
-const dailyWorkHours = 8.0
+const (
+	DefaultDailyWorkHours = 8.0
+	defaultTaskHours      = 1.0
+)
 
 func GenerateSchedule(tasks []model.Task, startDate time.Time) ([]model.Schedule, error) {
 	scored := ScoreAllTasks(tasks, startDate)
@@ -17,31 +20,31 @@ func GenerateSchedule(tasks []model.Task, startDate time.Time) ([]model.Schedule
 	})
 
 	var schedules []model.Schedule
-	currentDate := normalizeDate(startDate)
+	currentDate := toStartOfDay(startDate)
 	var currentSchedule *model.Schedule
 	orderIndex := 0
 
 	for _, task := range scored {
 		hours := task.EstimatedHours
 		if hours <= 0 {
-			hours = 1.0
+			hours = defaultTaskHours
 		}
 
 		for hours > 0 {
-			if currentSchedule == nil || currentSchedule.AllocatedHours >= dailyWorkHours {
+			if currentSchedule == nil || currentSchedule.AllocatedHours >= DefaultDailyWorkHours {
 				if currentSchedule != nil {
 					schedules = append(schedules, *currentSchedule)
 				}
 				currentSchedule = &model.Schedule{
 					Date:           currentDate,
-					TotalHours:     dailyWorkHours,
+					TotalHours:     DefaultDailyWorkHours,
 					AllocatedHours: 0,
 				}
 				orderIndex = 0
 				currentDate = currentDate.AddDate(0, 0, 1)
 			}
 
-			available := dailyWorkHours - currentSchedule.AllocatedHours
+			available := DefaultDailyWorkHours - currentSchedule.AllocatedHours
 			allocate := hours
 			if allocate > available {
 				allocate = available
@@ -76,6 +79,6 @@ func GenerateSchedule(tasks []model.Task, startDate time.Time) ([]model.Schedule
 	return schedules, nil
 }
 
-func normalizeDate(t time.Time) time.Time {
+func toStartOfDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }

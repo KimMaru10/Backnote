@@ -21,8 +21,8 @@ func NewScheduleHandler(db *gorm.DB) *ScheduleHandler {
 
 func (h *ScheduleHandler) GetSchedule(c echo.Context) error {
 	var tasks []model.Task
-	if err := h.db.Where("status != ?", "完了").Find(&tasks).Error; err != nil {
-		log.Printf("error: failed to fetch tasks for schedule: %v", err)
+	if err := h.db.Where("status != ?", model.TaskStatusCompleted).Find(&tasks).Error; err != nil {
+		log.Printf("error: failed to fetch tasks for schedule (status != %s): %v", model.TaskStatusCompleted, err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch tasks",
 		})

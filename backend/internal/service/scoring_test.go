@@ -8,10 +8,6 @@ import (
 	"github.com/KimMaru10/PeelTask/backend/internal/model"
 )
 
-func timePtr(t time.Time) *time.Time {
-	return &t
-}
-
 func TestCalcDeadlineUrgency(t *testing.T) {
 	now := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 
