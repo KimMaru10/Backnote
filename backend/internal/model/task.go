@@ -2,6 +2,8 @@ package model
 
 import "time"
 
+const TaskStatusCompleted = "完了"
+
 type Task struct {
 	ID               uint       `gorm:"primaryKey" json:"id"`
 	IssueKey         string     `gorm:"uniqueIndex;not null" json:"issueKey"`
