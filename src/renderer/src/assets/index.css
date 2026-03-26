@@ -9,3 +9,39 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* StickyCard — 付箋カード */
+.sticky-card {
+  @apply bg-white rounded-lg shadow-md p-4 border-l-4 transition-all duration-200;
+  transform-origin: top right;
+}
+
+.sticky-card:hover {
+  @apply shadow-lg -translate-y-0.5;
+}
+
+/* 付箋剥がしアニメーション */
+@keyframes peel {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  60% {
+    transform: rotate(-4deg) scale(1.04);
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotate(8deg) scale(0.7) translateY(-40px);
+    opacity: 0;
+  }
+}
+
+.sticky-card--peel {
+  animation: peel 300ms ease-in forwards;
+  pointer-events: none;
+}
+
+/* カードスタック — 下のカードが上にスライド */
+.sticky-card-list > .sticky-card {
+  transition: transform 300ms ease, opacity 300ms ease;
+}

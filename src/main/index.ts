@@ -37,7 +37,8 @@ ipcMain.on('get-backend-port', (event) => {
   event.returnValue = BACKEND_PORT
 })
 
-app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors,NetworkServiceInProcess2')
+app.commandLine.appendSwitch('enable-features', 'NetworkServiceInProcess')
 
 app.whenReady().then(async () => {
   try {
