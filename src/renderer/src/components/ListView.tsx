@@ -61,8 +61,20 @@ function getProjectKey(issueKey: string): string {
 
 export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabRange>('all')
+  const [slideDir, setSlideDir] = useState<'left' | 'right'>('right')
+  const [slideKey, setSlideKey] = useState(0)
   const [selectedSpaceId, setSelectedSpaceId] = useState<number | null>(null)
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
+
+  const TAB_ORDER: TabRange[] = ['all', 'overdue', 'today', 'week', 'future']
+
+  const handleTabChange = (next: TabRange): void => {
+    const currentIdx = TAB_ORDER.indexOf(activeTab)
+    const nextIdx = TAB_ORDER.indexOf(next)
+    setSlideDir(nextIdx > currentIdx ? 'right' : 'left')
+    setActiveTab(next)
+    setSlideKey((k) => k + 1)
+  }
 
   const spaceFiltered = selectedSpaceId !== null
     ? tasks.filter((t) => t.spaceId === selectedSpaceId)
@@ -148,7 +160,7 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
         {TABS.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
             className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors relative ${
               activeTab === tab.key
                 ? 'bg-white text-gray-800 shadow-sm'
@@ -165,30 +177,32 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
         ))}
       </div>
 
-      {filteredTasks.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-lg mb-1">タスクがありません</p>
-        </div>
-      ) : (
-        <div className="sticky-card-list grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredTasks.map((task) => (
-            <StickyCard
-              key={task.id}
-              id={task.id}
-              issueKey={task.issueKey}
-              title={task.title}
-              priority={task.priority}
-              estimatedHours={task.estimatedHours}
-              dueDate={task.dueDate}
-              score={task.score}
-              spaceColor={getSpaceColor(task.spaceId, spaces)}
-            />
-          ))}
-        </div>
-      )}
+      <div key={slideKey} className={slideDir === 'right' ? 'tab-slide-right' : 'tab-slide-left'}>
+        {filteredTasks.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-lg mb-1">タスクがありません</p>
+          </div>
+        ) : (
+          <div className="sticky-card-list grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredTasks.map((task) => (
+              <StickyCard
+                key={task.id}
+                id={task.id}
+                issueKey={task.issueKey}
+                title={task.title}
+                priority={task.priority}
+                estimatedHours={task.estimatedHours}
+                dueDate={task.dueDate}
+                score={task.score}
+                spaceColor={getSpaceColor(task.spaceId, spaces)}
+              />
+            ))}
+          </div>
+        )}
 
-      <div className="mt-4 text-xs text-gray-400 text-right">
-        {filteredTasks.length} / {tasks.length} タスク
+        <div className="mt-4 text-xs text-gray-400 text-right">
+          {filteredTasks.length} / {tasks.length} タスク
+        </div>
       </div>
     </div>
   )

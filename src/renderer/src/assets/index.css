@@ -83,23 +83,43 @@ body {
   pointer-events: none;
 }
 
-/* View Transitions — ズーム拡大 */
+/* View Transitions — デフォルト（ズーム拡大: カード→詳細） */
 ::view-transition-old(root) {
-  animation: zoom-out 0.25s ease-in forwards;
+  animation: vt-zoom-out 0.25s ease-in forwards;
 }
 
 ::view-transition-new(root) {
-  animation: zoom-in 0.3s ease-out forwards;
+  animation: vt-zoom-in 0.3s ease-out forwards;
 }
 
-@keyframes zoom-out {
+@keyframes vt-zoom-out {
   from { opacity: 1; transform: scale(1); }
   to { opacity: 0; transform: scale(1.06); }
 }
 
-@keyframes zoom-in {
+@keyframes vt-zoom-in {
   from { opacity: 0; transform: scale(0.94); }
   to { opacity: 1; transform: scale(1); }
+}
+
+
+/* タブ切り替え — 横スライド */
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.tab-slide-right {
+  animation: slide-in-right 0.25s ease-out;
+}
+
+.tab-slide-left {
+  animation: slide-in-left 0.25s ease-out;
 }
 
 /* 更新ボタン — アイコン回転 */

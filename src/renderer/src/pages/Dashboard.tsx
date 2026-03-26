@@ -38,6 +38,18 @@ function Dashboard(): JSX.Element {
   const [syncMessage, setSyncMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [slideDir, setSlideDir] = useState<'left' | 'right'>('right')
+  const [slideKey, setSlideKey] = useState(0)
+
+  const VIEW_ORDER: ViewMode[] = ['list', 'gantt', 'calendar']
+
+  const handleViewChange = (next: ViewMode): void => {
+    const currentIdx = VIEW_ORDER.indexOf(viewMode)
+    const nextIdx = VIEW_ORDER.indexOf(next)
+    setSlideDir(nextIdx > currentIdx ? 'right' : 'left')
+    setViewMode(next)
+    setSlideKey((k) => k + 1)
+  }
 
   const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
 
@@ -130,7 +142,7 @@ function Dashboard(): JSX.Element {
           )}
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => handleViewChange('list')}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
               }`}
@@ -138,7 +150,7 @@ function Dashboard(): JSX.Element {
               リスト
             </button>
             <button
-              onClick={() => setViewMode('gantt')}
+              onClick={() => handleViewChange('gantt')}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'gantt' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
               }`}
@@ -146,7 +158,7 @@ function Dashboard(): JSX.Element {
               ガント
             </button>
             <button
-              onClick={() => setViewMode('calendar')}
+              onClick={() => handleViewChange('calendar')}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'calendar' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
               }`}
@@ -194,12 +206,16 @@ function Dashboard(): JSX.Element {
             Backlogスペースを登録して、タスクの同期を始めましょう。
           </p>
         </div>
-      ) : viewMode === 'list' ? (
-        <ListView tasks={tasks} spaces={spaces} />
-      ) : viewMode === 'gantt' ? (
-        <GanttChart tasks={tasks} spaces={spaces} />
       ) : (
-        <CalendarView tasks={tasks} spaces={spaces} />
+        <div key={slideKey} className={slideDir === 'right' ? 'tab-slide-right' : 'tab-slide-left'}>
+          {viewMode === 'list' ? (
+            <ListView tasks={tasks} spaces={spaces} />
+          ) : viewMode === 'gantt' ? (
+            <GanttChart tasks={tasks} spaces={spaces} />
+          ) : (
+            <CalendarView tasks={tasks} spaces={spaces} />
+          )}
+        </div>
       )}
     </div>
   )

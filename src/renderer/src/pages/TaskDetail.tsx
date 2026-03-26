@@ -104,9 +104,29 @@ function TaskDetail(): JSX.Element {
   }
 
   const handleBack = (): void => {
-    const doc = document as Document & { startViewTransition?: (cb: () => void) => void }
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => { ready: Promise<void>; finished: Promise<void> }
+    }
     if (doc.startViewTransition) {
-      doc.startViewTransition(() => { flushSync(() => { navigate('/') }) })
+      const transition = doc.startViewTransition(() => {
+        flushSync(() => { navigate('/') })
+      })
+      transition.ready.then(() => {
+        document.documentElement.animate(
+          [
+            { opacity: 1, transform: 'translateX(0)' },
+            { opacity: 0, transform: 'translateX(100%)' }
+          ],
+          { duration: 300, easing: 'ease-in', pseudoElement: '::view-transition-old(root)' }
+        )
+        document.documentElement.animate(
+          [
+            { opacity: 0, transform: 'translateX(-100%)' },
+            { opacity: 1, transform: 'translateX(0)' }
+          ],
+          { duration: 300, easing: 'ease-out', pseudoElement: '::view-transition-new(root)' }
+        )
+      })
     } else {
       navigate('/')
     }
