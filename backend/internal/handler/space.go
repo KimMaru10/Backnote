@@ -167,7 +167,7 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	url := fmt.Sprintf("https://%s/api/v2/space", req.Domain)
+	url := fmt.Sprintf("https://%s/api/v2/space?apiKey=%s", req.Domain, req.ApiKey)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -176,7 +176,6 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 			Error:   "リクエスト作成に失敗しました",
 		})
 	}
-	httpReq.Header.Set("X-Backlog-Api-Key", req.ApiKey)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(httpReq)
