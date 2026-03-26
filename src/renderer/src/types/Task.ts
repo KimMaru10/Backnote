@@ -13,6 +13,14 @@ export interface Task {
   milestoneDueDate: string | null
 }
 
+export interface Space {
+  id: number
+  domain: string
+  displayName: string
+  color: string
+  isActive: boolean
+}
+
 export interface Memo {
   id: number
   taskId: number

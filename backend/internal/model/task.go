@@ -17,6 +17,7 @@ type Task struct {
 	Score            float64    `gorm:"default:0" json:"score"`
 	MilestoneID      string     `json:"milestoneId"`
 	MilestoneDueDate *time.Time `json:"milestoneDueDate"`
+	BacklogCreatedAt *time.Time `json:"backlogCreatedAt"`
 	SyncedAt         time.Time  `json:"syncedAt"`
 	CreatedAt        time.Time  `json:"createdAt"`
 	UpdatedAt        time.Time  `json:"updatedAt"`

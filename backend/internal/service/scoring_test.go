@@ -118,6 +118,32 @@ func TestCalcMilestoneProximity(t *testing.T) {
 	}
 }
 
+func TestCalcStaleness(t *testing.T) {
+	now := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name    string
+		created *time.Time
+		wantMin float64
+		wantMax float64
+	}{
+		{"作成日なし", nil, 0.0, 0.0},
+		{"1日前", timePtr(now.AddDate(0, 0, -1)), 0.01, 0.1},
+		{"30日前", timePtr(now.AddDate(0, 0, -30)), 0.5, 0.8},
+		{"90日前（放置）", timePtr(now.AddDate(0, 0, -90)), 0.9, 1.0},
+		{"未来の日付", timePtr(now.AddDate(0, 0, 1)), 0.0, 0.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CalcStaleness(tt.created, now)
+			if got < tt.wantMin || got > tt.wantMax {
+				t.Errorf("got %v, want between %v and %v", got, tt.wantMin, tt.wantMax)
+			}
+		})
+	}
+}
+
 func TestCalcScore(t *testing.T) {
 	now := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 
@@ -128,35 +154,38 @@ func TestCalcScore(t *testing.T) {
 		wantMax  float64
 	}{
 		{
-			name: "高優先度・期限近い・マイルストーン近い → 高スコア",
+			name: "高優先度・期限近い・マイルストーン近い・放置 → 高スコア",
 			task: model.Task{
 				Priority:         "高",
 				DueDate:          timePtr(now.AddDate(0, 0, 1)),
 				EstimatedHours:   2.0,
 				MilestoneDueDate: timePtr(now.AddDate(0, 0, 3)),
+				BacklogCreatedAt: timePtr(now.AddDate(0, 0, -60)),
 			},
 			wantMin: 0.8,
 			wantMax: 2.0,
 		},
 		{
-			name: "低優先度・期限なし・マイルストーンなし → 低スコア",
+			name: "低優先度・期限なし・マイルストーンなし・新規 → 低スコア",
 			task: model.Task{
-				Priority:       "低",
-				DueDate:        nil,
-				EstimatedHours: 8.0,
+				Priority:         "低",
+				DueDate:          nil,
+				EstimatedHours:   8.0,
+				BacklogCreatedAt: timePtr(now.AddDate(0, 0, -1)),
 			},
 			wantMin: 0.0,
 			wantMax: 0.2,
 		},
 		{
-			name: "中優先度・期限10日後・マイルストーンなし → 中スコア",
+			name: "中優先度・期限10日後・60日放置 → 中〜高スコア",
 			task: model.Task{
-				Priority:       "中",
-				DueDate:        timePtr(now.AddDate(0, 0, 10)),
-				EstimatedHours: 4.0,
+				Priority:         "中",
+				DueDate:          timePtr(now.AddDate(0, 0, 10)),
+				EstimatedHours:   4.0,
+				BacklogCreatedAt: timePtr(now.AddDate(0, 0, -60)),
 			},
 			wantMin: 0.2,
-			wantMax: 0.5,
+			wantMax: 0.6,
 		},
 	}
 

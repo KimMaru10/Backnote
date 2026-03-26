@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react'
-import type { Task } from '../types/Task'
+import type { Task, Space } from '../types/Task'
 import ListView from '../components/ListView'
 import GanttChart from '../components/GanttChart'
+import CalendarView from '../components/CalendarView'
 
-type ViewMode = 'list' | 'gantt'
-
-interface Space {
-  id: number
-  displayName: string
-  color: string
-}
+type ViewMode = 'list' | 'gantt' | 'calendar'
 
 function Dashboard(): JSX.Element {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -117,6 +112,14 @@ function Dashboard(): JSX.Element {
             >
               ガント
             </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                viewMode === 'calendar' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              カレンダー
+            </button>
           </div>
           <button
             onClick={handleSync}
@@ -148,8 +151,10 @@ function Dashboard(): JSX.Element {
         </div>
       ) : viewMode === 'list' ? (
         <ListView tasks={tasks} spaces={spaces} />
-      ) : (
+      ) : viewMode === 'gantt' ? (
         <GanttChart tasks={tasks} spaces={spaces} />
+      ) : (
+        <CalendarView tasks={tasks} spaces={spaces} />
       )}
     </div>
   )

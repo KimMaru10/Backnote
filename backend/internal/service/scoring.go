@@ -8,14 +8,16 @@ import (
 )
 
 const (
-	weightDeadline   = 0.5
-	weightPriority   = 0.3
-	weightEffort     = 0.1
-	weightMilestone  = 0.1
+	weightDeadline  = 0.35
+	weightPriority  = 0.25
+	weightEffort    = 0.10
+	weightMilestone = 0.10
+	weightStaleness = 0.20
 
 	milestoneDaysThreshold = 7
 	minRemainingDays       = 0.5
 	minEstimatedHours      = 1.0
+	stalenessBaselineDays  = 30.0
 )
 
 func CalcDeadlineUrgency(dueDate *time.Time, now time.Time) float64 {
@@ -54,16 +56,32 @@ func CalcMilestoneProximity(milestoneDueDate *time.Time, now time.Time) float64 
 	return 0.0
 }
 
+// CalcStaleness は課題の放置度を計算する。
+// 作成日から経過日数が長いほどスコアが高くなる（放置されている＝対応が必要）
+func CalcStaleness(backlogCreatedAt *time.Time, now time.Time) float64 {
+	if backlogCreatedAt == nil {
+		return 0.0
+	}
+	elapsedDays := now.Sub(*backlogCreatedAt).Hours() / 24.0
+	if elapsedDays <= 0 {
+		return 0.0
+	}
+	// 30日で1.0に達し、それ以降は緩やかに上昇する対数スケール
+	return math.Min(math.Log1p(elapsedDays/stalenessBaselineDays), 1.0)
+}
+
 func CalcScore(task model.Task, now time.Time) float64 {
 	deadline := CalcDeadlineUrgency(task.DueDate, now)
 	priority := CalcPriorityScore(task.Priority)
 	effort := CalcEffortPenalty(task.EstimatedHours)
 	milestone := CalcMilestoneProximity(task.MilestoneDueDate, now)
+	staleness := CalcStaleness(task.BacklogCreatedAt, now)
 
 	return deadline*weightDeadline +
 		priority*weightPriority +
 		effort*weightEffort +
-		milestone*weightMilestone
+		milestone*weightMilestone +
+		staleness*weightStaleness
 }
 
 func ScoreAllTasks(tasks []model.Task, now time.Time) []model.Task {
