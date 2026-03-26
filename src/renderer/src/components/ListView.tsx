@@ -1,101 +1,129 @@
 import { useState } from 'react'
+import type { Task } from '../types/Task'
 import StickyCard from './StickyCard'
 
-interface Task {
-  id: number
-  issueKey: string
-  title: string
-  priority: string
-  estimatedHours: number
-  dueDate: string | null
-  status: string
-  score: number
-  spaceId: number
-}
+type TabRange = 'all' | 'overdue' | 'today' | 'week' | 'future'
 
-type TabRange = 'today' | 'week' | 'nextWeek'
+interface Space {
+  id: number
+  displayName: string
+  color: string
+}
 
 interface ListViewProps {
   tasks: Task[]
-  onComplete: (id: number) => void
+  spaces: Space[]
 }
 
-function getDateRange(tab: TabRange): { start: Date; end: Date } {
+function filterTasksByTab(tasks: Task[], tab: TabRange): Task[] {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const weekEnd = new Date(today)
+  weekEnd.setDate(weekEnd.getDate() + 7)
 
   switch (tab) {
-    case 'today': {
-      const end = new Date(today)
-      end.setDate(end.getDate() + 1)
-      return { start: today, end }
-    }
-    case 'week': {
-      const dayOfWeek = today.getDay()
-      const monday = new Date(today)
-      monday.setDate(monday.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
-      const sunday = new Date(monday)
-      sunday.setDate(sunday.getDate() + 7)
-      return { start: monday, end: sunday }
-    }
-    case 'nextWeek': {
-      const dayOfWeek = today.getDay()
-      const nextMonday = new Date(today)
-      nextMonday.setDate(nextMonday.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) + 7)
-      const nextSunday = new Date(nextMonday)
-      nextSunday.setDate(nextSunday.getDate() + 7)
-      return { start: nextMonday, end: nextSunday }
-    }
+    case 'all':
+      return tasks
+    case 'overdue':
+      return tasks.filter((t) => t.dueDate && new Date(t.dueDate) < today)
+    case 'today':
+      return tasks.filter((t) => {
+        if (!t.dueDate) return false
+        const due = new Date(t.dueDate)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        return due >= today && due < tomorrow
+      })
+    case 'week':
+      return tasks.filter((t) => {
+        if (!t.dueDate) return false
+        const due = new Date(t.dueDate)
+        return due >= today && due < weekEnd
+      })
+    case 'future':
+      return tasks.filter((t) => {
+        if (!t.dueDate) return true
+        return new Date(t.dueDate) >= weekEnd
+      })
   }
-}
-
-function filterTasksByRange(tasks: Task[], tab: TabRange): Task[] {
-  if (tab === 'today') {
-    return tasks
-  }
-
-  const { start, end } = getDateRange(tab)
-  return tasks.filter((task) => {
-    if (!task.dueDate) return tab === 'week'
-    const due = new Date(task.dueDate)
-    return due >= start && due < end
-  })
 }
 
 const TABS: { key: TabRange; label: string }[] = [
+  { key: 'all', label: 'すべて' },
+  { key: 'overdue', label: '期限切れ' },
   { key: 'today', label: '今日' },
   { key: 'week', label: '今週' },
-  { key: 'nextWeek', label: '来週' }
+  { key: 'future', label: '未来' }
 ]
 
-const SPACE_COLORS = [
-  '#FAC775', '#FF6B6B', '#4ECDC4', '#45B7D1',
-  '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'
-]
-
-function getSpaceColor(spaceId: number): string {
-  return SPACE_COLORS[spaceId % SPACE_COLORS.length]
+function getSpaceColor(spaceId: number, spaces: Space[]): string {
+  const space = spaces.find((s) => s.id === spaceId)
+  return space?.color ?? '#FAC775'
 }
 
-export default function ListView({ tasks, onComplete }: ListViewProps): JSX.Element {
-  const [activeTab, setActiveTab] = useState<TabRange>('today')
+export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element {
+  const [activeTab, setActiveTab] = useState<TabRange>('all')
+  const [selectedSpaceId, setSelectedSpaceId] = useState<number | null>(null)
 
-  const filteredTasks = filterTasksByRange(tasks, activeTab)
+  const spaceFiltered = selectedSpaceId !== null
+    ? tasks.filter((t) => t.spaceId === selectedSpaceId)
+    : tasks
+
+  const filteredTasks = filterTasksByTab(spaceFiltered, activeTab)
+
+  const overdueCount = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()).length
 
   return (
     <div>
+      {spaces.length > 1 && (
+        <div className="flex gap-2 mb-3 flex-wrap">
+          <button
+            onClick={() => setSelectedSpaceId(null)}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              selectedSpaceId === null
+                ? 'bg-gray-800 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            全スペース
+          </button>
+          {spaces.map((space) => (
+            <button
+              key={space.id}
+              onClick={() => setSelectedSpaceId(space.id)}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                selectedSpaceId === space.id
+                  ? 'text-white'
+                  : 'text-gray-600 hover:opacity-80'
+              }`}
+              style={{
+                backgroundColor: selectedSpaceId === space.id ? space.color : `${space.color}30`,
+                borderColor: space.color
+              }}
+            >
+              {space.displayName}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors relative ${
               activeTab === tab.key
                 ? 'bg-white text-gray-800 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             {tab.label}
+            {tab.key === 'overdue' && overdueCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded-full">
+                {overdueCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -103,11 +131,6 @@ export default function ListView({ tasks, onComplete }: ListViewProps): JSX.Elem
       {filteredTasks.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <p className="text-lg mb-1">タスクがありません</p>
-          <p className="text-sm">
-            {activeTab === 'today' && 'すべてのタスクが完了しています'}
-            {activeTab === 'week' && '今週の期限のタスクはありません'}
-            {activeTab === 'nextWeek' && '来週の期限のタスクはありません'}
-          </p>
         </div>
       ) : (
         <div className="sticky-card-list grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -121,8 +144,7 @@ export default function ListView({ tasks, onComplete }: ListViewProps): JSX.Elem
               estimatedHours={task.estimatedHours}
               dueDate={task.dueDate}
               score={task.score}
-              spaceColor={getSpaceColor(task.spaceId)}
-              onComplete={onComplete}
+              spaceColor={getSpaceColor(task.spaceId, spaces)}
             />
           ))}
         </div>

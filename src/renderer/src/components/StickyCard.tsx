@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface StickyCardProps {
   id: number
@@ -9,7 +9,6 @@ interface StickyCardProps {
   dueDate: string | null
   score: number
   spaceColor: string
-  onComplete: (id: number) => void
 }
 
 function getPriorityBadge(priority: string): { label: string; className: string } {
@@ -46,24 +45,18 @@ export default function StickyCard({
   estimatedHours,
   dueDate,
   score,
-  spaceColor,
-  onComplete
+  spaceColor
 }: StickyCardProps): JSX.Element {
-  const [isPeeling, setIsPeeling] = useState(false)
+  const navigate = useNavigate()
   const priorityBadge = getPriorityBadge(priority)
   const dueDateStr = formatDueDate(dueDate)
-
-  const handleComplete = (): void => {
-    setIsPeeling(true)
-    setTimeout(() => {
-      onComplete(id)
-    }, 300)
-  }
+  const isOverdue = dueDate && new Date(dueDate) < new Date()
 
   return (
     <div
-      className={`sticky-card ${isPeeling ? 'sticky-card--peel' : ''}`}
+      className="sticky-card cursor-pointer"
       style={{ borderLeftColor: spaceColor }}
+      onClick={() => navigate(`/tasks/${id}`)}
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-gray-500 font-mono">{issueKey}</span>
@@ -76,13 +69,13 @@ export default function StickyCard({
         {title}
       </h3>
 
-      <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+      <div className="flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center gap-2">
           {estimatedHours > 0 && (
             <span>{estimatedHours}h</span>
           )}
           {dueDateStr && (
-            <span className={dueDate && new Date(dueDate) < new Date() ? 'text-red-500 font-medium' : ''}>
+            <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
               {dueDateStr}
             </span>
           )}
@@ -91,16 +84,6 @@ export default function StickyCard({
           {score.toFixed(2)}
         </span>
       </div>
-
-      <button
-        onClick={handleComplete}
-        disabled={isPeeling}
-        className="w-full py-1.5 text-xs font-medium rounded-md transition-colors
-          bg-peeltask-yellow hover:bg-peeltask-yellow/80 text-peeltask-text
-          disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        完了する
-      </button>
     </div>
   )
 }

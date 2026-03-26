@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react'
+import type { Task } from '../types/Task'
 import ListView from '../components/ListView'
 
-interface Task {
+interface Space {
   id: number
-  issueKey: string
-  title: string
-  priority: string
-  estimatedHours: number
-  dueDate: string | null
-  status: string
-  score: number
-  spaceId: number
+  displayName: string
+  color: string
 }
 
 function Dashboard(): JSX.Element {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [spaces, setSpaces] = useState<Space[]>([])
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,12 +20,24 @@ function Dashboard(): JSX.Element {
   const fetchTasks = async (): Promise<void> => {
     try {
       const res = await fetch(`${backendUrl}/api/tasks`)
+      if (!res.ok) throw new Error('fetch failed')
       const data = await res.json()
-      setTasks(data)
+      setTasks(Array.isArray(data) ? data : [])
       setError(null)
     } catch (_err: unknown) {
       setTasks([])
       setError('タスクの取得に失敗しました。バックエンドが起動しているか確認してください。')
+    }
+  }
+
+  const fetchSpaces = async (): Promise<void> => {
+    try {
+      const res = await fetch(`${backendUrl}/api/spaces`)
+      if (!res.ok) return
+      const data = await res.json()
+      setSpaces(Array.isArray(data) ? data : [])
+    } catch (_err: unknown) {
+      // スペース取得失敗は致命的でない
     }
   }
 
@@ -39,7 +47,7 @@ function Dashboard(): JSX.Element {
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
     } catch (_err: unknown) {
-      // バックエンド未起動時は初回のみ無視
+      // バックエンド未起動時は無視
     }
   }
 
@@ -48,6 +56,7 @@ function Dashboard(): JSX.Element {
     setError(null)
     try {
       const res = await fetch(`${backendUrl}/api/sync`, { method: 'POST' })
+      if (!res.ok) throw new Error('sync failed')
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
       if (data.errors && data.errors.length > 0) {
@@ -61,17 +70,9 @@ function Dashboard(): JSX.Element {
     }
   }
 
-  const handleComplete = async (taskId: number): Promise<void> => {
-    try {
-      await fetch(`${backendUrl}/api/tasks/${taskId}/complete`, { method: 'PATCH' })
-      setTasks((prev) => prev.filter((t) => t.id !== taskId))
-    } catch (_err: unknown) {
-      setError('タスクの完了に失敗しました')
-    }
-  }
-
   useEffect(() => {
     fetchTasks()
+    fetchSpaces()
     fetchSyncStatus()
   }, [])
 
@@ -124,7 +125,7 @@ function Dashboard(): JSX.Element {
           </p>
         </div>
       ) : (
-        <ListView tasks={tasks} onComplete={handleComplete} />
+        <ListView tasks={tasks} spaces={spaces} />
       )}
     </div>
   )
