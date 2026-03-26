@@ -1,38 +1,42 @@
-import { useState } from 'react'
+import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import Settings from './pages/Settings'
+import TaskDetail from './pages/TaskDetail'
 
-type Page = 'dashboard' | 'settings'
+function AppLayout(): JSX.Element {
+  const navigate = useNavigate()
+  const location = useLocation()
 
-function App(): JSX.Element {
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const isActive = (path: string): boolean => location.pathname === path
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#FAC775] rounded-lg flex items-center justify-center">
-            <span className="text-[#BA7517] font-bold text-sm">P</span>
+        <div
+          className="flex items-center gap-3 cursor-pointer"
+          onClick={() => navigate('/')}
+        >
+          <div className="w-8 h-8 bg-peeltask-yellow rounded-lg flex items-center justify-center">
+            <span className="text-peeltask-text font-bold text-sm">P</span>
           </div>
           <h1 className="text-lg font-bold text-gray-800">PeelTask</h1>
         </div>
         <nav className="flex gap-2">
           <button
-            onClick={() => setCurrentPage('dashboard')}
+            onClick={() => navigate('/')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentPage === 'dashboard'
-                ? 'bg-[#FAC775] text-[#BA7517]'
+              isActive('/')
+                ? 'bg-peeltask-yellow text-peeltask-text'
                 : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
             Dashboard
           </button>
           <button
-            onClick={() => setCurrentPage('settings')}
+            onClick={() => navigate('/settings')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentPage === 'settings'
-                ? 'bg-[#FAC775] text-[#BA7517]'
+              isActive('/settings')
+                ? 'bg-peeltask-yellow text-peeltask-text'
                 : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
@@ -41,11 +45,22 @@ function App(): JSX.Element {
         </nav>
       </header>
 
-      {/* Content */}
       <main className="p-6">
-        {currentPage === 'dashboard' ? <Dashboard /> : <Settings />}
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/tasks/:id" element={<TaskDetail />} />
+        </Routes>
       </main>
     </div>
+  )
+}
+
+function App(): JSX.Element {
+  return (
+    <HashRouter>
+      <AppLayout />
+    </HashRouter>
   )
 }
 

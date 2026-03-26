@@ -52,7 +52,10 @@ func main() {
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
-	api.PATCH("/tasks/:id/complete", taskHandler.CompleteTask)
+	api.GET("/tasks/:id", taskHandler.GetTask)
+	api.GET("/tasks/:id/memos", taskHandler.GetMemos)
+	api.POST("/tasks/:id/memos", taskHandler.AddMemo)
+	api.DELETE("/tasks/:id/memos/:memoId", taskHandler.DeleteMemo)
 	api.POST("/sync", syncHandler.Sync)
 	api.GET("/tasks", syncHandler.GetTasks)
 	api.GET("/sync/status", syncHandler.GetSyncStatus)
