@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/KimMaru10/PeelTask/backend/internal/model"
 	"github.com/labstack/echo/v4"
@@ -52,9 +53,19 @@ func (h *TaskHandler) AddMemo(c echo.Context) error {
 	var req struct {
 		Content string `json:"content"`
 	}
-	if err := c.Bind(&req); err != nil || req.Content == "" {
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	const maxMemoLength = 2000
+	trimmed := strings.TrimSpace(req.Content)
+	if trimmed == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "content is required"})
 	}
+	if len(trimmed) > maxMemoLength {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "content is too long (max 2000 chars)"})
+	}
+	req.Content = trimmed
 
 	memo := model.Memo{
 		TaskID:  task.ID,
@@ -72,6 +83,7 @@ func (h *TaskHandler) DeleteMemo(c echo.Context) error {
 	memoID := c.Param("memoId")
 	result := h.db.Delete(&model.Memo{}, memoID)
 	if result.Error != nil {
+		log.Printf("error: failed to delete memo %s: %v", memoID, result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to delete memo"})
 	}
 	if result.RowsAffected == 0 {

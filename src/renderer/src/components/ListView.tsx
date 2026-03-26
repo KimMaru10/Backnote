@@ -61,24 +61,37 @@ function getSpaceColor(spaceId: number, spaces: Space[]): string {
   return space?.color ?? '#FAC775'
 }
 
+function getProjectKey(issueKey: string): string {
+  return issueKey.split('-')[0]
+}
+
 export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabRange>('all')
   const [selectedSpaceId, setSelectedSpaceId] = useState<number | null>(null)
+  const [selectedProject, setSelectedProject] = useState<string | null>(null)
 
   const spaceFiltered = selectedSpaceId !== null
     ? tasks.filter((t) => t.spaceId === selectedSpaceId)
     : tasks
 
-  const filteredTasks = filterTasksByTab(spaceFiltered, activeTab)
+  const projectFiltered = selectedProject !== null
+    ? spaceFiltered.filter((t) => getProjectKey(t.issueKey) === selectedProject)
+    : spaceFiltered
 
-  const overdueCount = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()).length
+  const filteredTasks = filterTasksByTab(projectFiltered, activeTab)
+
+  const now = new Date()
+  const overdueCount = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now).length
+
+  // スペースフィルター適用後のプロジェクト一覧を抽出
+  const projects = [...new Set(spaceFiltered.map((t) => getProjectKey(t.issueKey)))].sort()
 
   return (
     <div>
       {spaces.length > 1 && (
         <div className="flex gap-2 mb-3 flex-wrap">
           <button
-            onClick={() => setSelectedSpaceId(null)}
+            onClick={() => { setSelectedSpaceId(null); setSelectedProject(null) }}
             className={`px-3 py-1 text-xs rounded-full transition-colors ${
               selectedSpaceId === null
                 ? 'bg-gray-800 text-white'
@@ -90,7 +103,7 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
           {spaces.map((space) => (
             <button
               key={space.id}
-              onClick={() => setSelectedSpaceId(space.id)}
+              onClick={() => { setSelectedSpaceId(space.id); setSelectedProject(null) }}
               className={`px-3 py-1 text-xs rounded-full transition-colors ${
                 selectedSpaceId === space.id
                   ? 'text-white'
@@ -102,6 +115,34 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
               }}
             >
               {space.displayName}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {projects.length > 1 && (
+        <div className="flex gap-2 mb-3 flex-wrap">
+          <button
+            onClick={() => setSelectedProject(null)}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              selectedProject === null
+                ? 'bg-gray-700 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            全プロジェクト
+          </button>
+          {projects.map((proj) => (
+            <button
+              key={proj}
+              onClick={() => setSelectedProject(proj)}
+              className={`px-3 py-1 text-xs rounded-full font-mono transition-colors ${
+                selectedProject === proj
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {proj}
             </button>
           ))}
         </div>
