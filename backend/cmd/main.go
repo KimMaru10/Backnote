@@ -48,9 +48,11 @@ func main() {
 	syncHandler := handler.NewSyncHandler(db, syncer)
 	spaceHandler := handler.NewSpaceHandler(db)
 	scheduleHandler := handler.NewScheduleHandler(db)
+	taskHandler := handler.NewTaskHandler(db)
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
+	api.PATCH("/tasks/:id/complete", taskHandler.CompleteTask)
 	api.POST("/sync", syncHandler.Sync)
 	api.GET("/tasks", syncHandler.GetTasks)
 	api.GET("/sync/status", syncHandler.GetSyncStatus)
