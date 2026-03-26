@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync/atomic"
 	"time"
@@ -105,12 +104,37 @@ func (s *Syncer) runSync() (int, []string) {
 			continue
 		}
 
+		// Upsert: 取得したタスクを保存/更新
+		activeIssueKeys := make([]string, 0, len(result.Tasks))
 		if len(result.Tasks) > 0 {
-			if err := s.db.Save(&result.Tasks).Error; err != nil {
-				log.Printf("error: failed to save tasks for space %d: %v", result.SpaceID, err)
-				errs = append(errs, fmt.Sprintf("DB save error (space %d): %v", result.SpaceID, err))
-				continue
+			ScoreAllTasks(result.Tasks, time.Now())
+			for i := range result.Tasks {
+				task := &result.Tasks[i]
+				activeIssueKeys = append(activeIssueKeys, task.IssueKey)
+				var existing model.Task
+				if err := s.db.Where("issue_key = ?", task.IssueKey).First(&existing).Error; err == nil {
+					task.ID = existing.ID
+					s.db.Save(task)
+				} else {
+					if err := s.db.Create(task).Error; err != nil {
+						log.Printf("error: failed to create task %s: %v", task.IssueKey, err)
+					}
+				}
 			}
+		}
+
+		// クリーンアップ: Backlogで完了/削除されたタスクをローカルから削除
+		var staleTaskIDs []uint
+		query := s.db.Model(&model.Task{}).Where("space_id = ?", result.SpaceID)
+		if len(activeIssueKeys) > 0 {
+			query = query.Where("issue_key NOT IN ?", activeIssueKeys)
+		}
+		query.Pluck("id", &staleTaskIDs)
+
+		if len(staleTaskIDs) > 0 {
+			s.db.Where("task_id IN ?", staleTaskIDs).Delete(&model.Memo{})
+			s.db.Where("id IN ?", staleTaskIDs).Delete(&model.Task{})
+			log.Printf("cleanup: removed %d stale tasks for space %d", len(staleTaskIDs), result.SpaceID)
 		}
 
 		totalTasks += len(result.Tasks)

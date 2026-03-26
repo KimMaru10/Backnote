@@ -52,7 +52,8 @@ type backlogIssue struct {
 		Name string  `json:"name"`
 		Date *string `json:"date"`
 	} `json:"milestone"`
-	Description string `json:"description"`
+	Description string  `json:"description"`
+	Created     *string `json:"created"`
 }
 
 func (c *BacklogClient) fetchMyUserID(ctx context.Context, domain string, apiKey string) (int, error) {
@@ -127,6 +128,15 @@ func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpac
 			Status:         issue.Status.Name,
 			SpaceID:        space.ID,
 			SyncedAt:       time.Now(),
+		}
+
+		if issue.Created != nil {
+			t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.Created)
+			if parseErr != nil {
+				log.Printf("warn: failed to parse created date for %s: %v", issue.IssueKey, parseErr)
+			} else {
+				task.BacklogCreatedAt = &t
+			}
 		}
 
 		if issue.DueDate != nil {

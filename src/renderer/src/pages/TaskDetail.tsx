@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { Task, Memo } from '../types/Task'
-
-interface Space {
-  id: number
-  domain: string
-  displayName: string
-}
+import type { Task, Memo, Space } from '../types/Task'
 
 function TaskDetail(): JSX.Element {
   const { id } = useParams<{ id: string }>()

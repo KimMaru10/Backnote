@@ -1,14 +1,8 @@
-import { useState } from 'react'
-import type { Task } from '../types/Task'
+import { useState, useMemo } from 'react'
+import type { Task, Space } from '../types/Task'
 import StickyCard from './StickyCard'
 
 type TabRange = 'all' | 'overdue' | 'today' | 'week' | 'future'
-
-interface Space {
-  id: number
-  displayName: string
-  color: string
-}
 
 interface ListViewProps {
   tasks: Task[]
@@ -80,8 +74,10 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
 
   const filteredTasks = filterTasksByTab(projectFiltered, activeTab)
 
-  const now = new Date()
-  const overdueCount = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now).length
+  const overdueCount = useMemo(
+    () => tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()).length,
+    [tasks]
+  )
 
   // スペースフィルター適用後のプロジェクト一覧を抽出
   const projects = [...new Set(spaceFiltered.map((t) => getProjectKey(t.issueKey)))].sort()
