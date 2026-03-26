@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ListView from '../components/ListView'
 
 interface Task {
   id: number
@@ -38,7 +39,7 @@ function Dashboard(): JSX.Element {
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
     } catch (_err: unknown) {
-      // バックエンド未起動時は初回のみ無視（fetchTasksでエラー表示）
+      // バックエンド未起動時は初回のみ無視
     }
   }
 
@@ -60,6 +61,15 @@ function Dashboard(): JSX.Element {
     }
   }
 
+  const handleComplete = async (taskId: number): Promise<void> => {
+    try {
+      await fetch(`${backendUrl}/api/tasks/${taskId}/complete`, { method: 'PATCH' })
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
+    } catch (_err: unknown) {
+      setError('タスクの完了に失敗しました')
+    }
+  }
+
   useEffect(() => {
     fetchTasks()
     fetchSyncStatus()
@@ -75,15 +85,6 @@ function Dashboard(): JSX.Element {
     })
   }
 
-  const priorityColor = (priority: string): string => {
-    switch (priority) {
-      case '高': return 'text-red-600 bg-red-50'
-      case '中': return 'text-yellow-600 bg-yellow-50'
-      case '低': return 'text-blue-600 bg-blue-50'
-      default: return 'text-gray-600 bg-gray-50'
-    }
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -97,7 +98,7 @@ function Dashboard(): JSX.Element {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="px-4 py-2 bg-[#FAC775] text-[#BA7517] rounded-lg font-medium hover:bg-[#f5bc5c] disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-peeltask-yellow text-peeltask-text rounded-lg font-medium hover:bg-peeltask-yellow/80 disabled:opacity-50 transition-colors"
           >
             {syncing ? '同期中...' : 'Sync'}
           </button>
@@ -112,8 +113,8 @@ function Dashboard(): JSX.Element {
 
       {tasks.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-[#FAC775] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-[#BA7517] font-bold text-2xl">P</span>
+          <div className="w-16 h-16 bg-peeltask-yellow rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-peeltask-text font-bold text-2xl">P</span>
           </div>
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
             Welcome to PeelTask
@@ -123,38 +124,7 @@ function Dashboard(): JSX.Element {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-xs text-gray-400 font-mono shrink-0">
-                    {task.issueKey}
-                  </span>
-                  <span className="font-medium text-gray-800 truncate">
-                    {task.title}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 shrink-0 ml-4">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityColor(task.priority)}`}>
-                    {task.priority}
-                  </span>
-                  {task.dueDate && (
-                    <span className="text-xs text-gray-500">
-                      {new Date(task.dueDate).toLocaleDateString('ja-JP')}
-                    </span>
-                  )}
-                  <span className="text-xs text-gray-400">
-                    score: {task.score.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ListView tasks={tasks} onComplete={handleComplete} />
       )}
     </div>
   )
