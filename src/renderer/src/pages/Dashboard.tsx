@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import type { Task } from '../types/Task'
 import ListView from '../components/ListView'
+import GanttChart from '../components/GanttChart'
+
+type ViewMode = 'list' | 'gantt'
 
 interface Space {
   id: number
@@ -14,6 +17,7 @@ function Dashboard(): JSX.Element {
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
 
@@ -96,6 +100,24 @@ function Dashboard(): JSX.Element {
               最終同期: {formatDate(lastSyncedAt)}
             </span>
           )}
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                viewMode === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              リスト
+            </button>
+            <button
+              onClick={() => setViewMode('gantt')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                viewMode === 'gantt' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              ガント
+            </button>
+          </div>
           <button
             onClick={handleSync}
             disabled={syncing}
@@ -124,8 +146,10 @@ function Dashboard(): JSX.Element {
             Backlogスペースを登録して、タスクの同期を始めましょう。
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <ListView tasks={tasks} spaces={spaces} />
+      ) : (
+        <GanttChart tasks={tasks} spaces={spaces} />
       )}
     </div>
   )
