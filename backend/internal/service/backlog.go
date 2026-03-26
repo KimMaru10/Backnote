@@ -55,15 +55,49 @@ type backlogIssue struct {
 	Description string `json:"description"`
 }
 
+func (c *BacklogClient) fetchMyUserID(ctx context.Context, domain string, apiKey string) (int, error) {
+	url := fmt.Sprintf("https://%s/api/v2/users/myself", domain)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return 0, fmt.Errorf("backlog myself request create: %w", err)
+	}
+	req.Header.Set("X-Backlog-Api-Key", apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("backlog myself request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("backlog myself API error: status %d", resp.StatusCode)
+	}
+
+	var user struct {
+		ID int `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return 0, fmt.Errorf("backlog myself decode: %w", err)
+	}
+
+	return user.ID, nil
+}
+
 func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string) ([]model.Task, error) {
-	url := fmt.Sprintf("https://%s/api/v2/issues?count=%d&statusId[]=1&statusId[]=2&statusId[]=3",
-		space.Domain, issuesPerPage)
+	myUserID, err := c.fetchMyUserID(ctx, space.Domain, apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("fetch my user ID: %w", err)
+	}
+
+	url := fmt.Sprintf("https://%s/api/v2/issues?count=%d&statusId[]=1&statusId[]=2&statusId[]=3&assigneeId[]=%d",
+		space.Domain, issuesPerPage, myUserID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("backlog request create: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("X-Backlog-Api-Key", apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
