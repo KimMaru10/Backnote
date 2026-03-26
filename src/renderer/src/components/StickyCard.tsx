@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 
 interface StickyCardProps {
@@ -14,13 +15,13 @@ interface StickyCardProps {
 function getPriorityBadge(priority: string): { label: string; className: string } {
   switch (priority) {
     case '高':
-      return { label: '高', className: 'bg-red-100 text-red-700' }
+      return { label: '高', className: 'bg-rose-600 text-white' }
     case '中':
-      return { label: '中', className: 'bg-yellow-100 text-yellow-700' }
+      return { label: '中', className: 'bg-slate-500 text-white' }
     case '低':
-      return { label: '低', className: 'bg-blue-100 text-blue-700' }
+      return { label: '低', className: 'bg-slate-300 text-slate-600' }
     default:
-      return { label: priority, className: 'bg-gray-100 text-gray-700' }
+      return { label: priority, className: 'bg-slate-200 text-slate-500' }
   }
 }
 
@@ -52,14 +53,33 @@ export default function StickyCard({
   const dueDateStr = formatDueDate(dueDate)
   const isOverdue = dueDate && new Date(dueDate) < new Date()
 
+  const handleClick = (): void => {
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => void }
+    if (doc.startViewTransition) {
+      doc.startViewTransition(() => {
+        flushSync(() => {
+          navigate(`/tasks/${id}`)
+        })
+      })
+    } else {
+      navigate(`/tasks/${id}`)
+    }
+  }
+
   return (
     <div
       className="sticky-card cursor-pointer"
-      style={{ borderLeftColor: spaceColor }}
-      onClick={() => navigate(`/tasks/${id}`)}
+      style={{ viewTransitionName: `task-card-${id}` }}
+      onClick={handleClick}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-gray-500 font-mono">{issueKey}</span>
+        <div className="flex items-center gap-1.5">
+          <span
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: spaceColor }}
+          />
+          <span className="text-xs text-gray-400 font-mono">{issueKey}</span>
+        </div>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityBadge.className}`}>
           {priorityBadge.label}
         </span>

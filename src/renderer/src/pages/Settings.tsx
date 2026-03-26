@@ -16,7 +16,22 @@ interface SpaceForm {
   displayName: string
 }
 
-const COLORS = ['#FF6B6B', '#6BCB77', '#4D96FF', '#FAC775', '#A66CFF', '#FF922B']
+const DEFAULT_COLORS = ['#FF6B6B', '#6BCB77', '#4D96FF', '#FAC775', '#A66CFF', '#FF922B']
+const STORAGE_KEY = 'peeltask-custom-colors'
+
+function loadCustomColors(): string[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
+
+function saveCustomColors(colors: string[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(colors))
+}
+
 const emptyForm: SpaceForm = { domain: '', apiKeyRef: '', color: '#FAC775', displayName: '' }
 
 function Settings(): JSX.Element {
@@ -26,6 +41,31 @@ function Settings(): JSX.Element {
   const [showForm, setShowForm] = useState(false)
   const [testResult, setTestResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [customColors, setCustomColors] = useState<string[]>(loadCustomColors)
+
+  const allColors = [...DEFAULT_COLORS, ...customColors]
+
+  const [showColorPicker, setShowColorPicker] = useState(false)
+  const [pickerColor, setPickerColor] = useState('#8B5CF6')
+
+  const handleConfirmColor = (): void => {
+    if (!allColors.includes(pickerColor)) {
+      const updated = [...customColors, pickerColor]
+      setCustomColors(updated)
+      saveCustomColors(updated)
+    }
+    setForm((prev) => ({ ...prev, color: pickerColor }))
+    setShowColorPicker(false)
+  }
+
+  const handleRemoveColor = (color: string): void => {
+    const updated = customColors.filter((c) => c !== color)
+    setCustomColors(updated)
+    saveCustomColors(updated)
+    if (form.color === color) {
+      setForm((prev) => ({ ...prev, color: DEFAULT_COLORS[0] }))
+    }
+  }
 
   const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
 
@@ -122,7 +162,7 @@ function Settings(): JSX.Element {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Settings</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">設定</h2>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -159,13 +199,13 @@ function Settings(): JSX.Element {
                     onClick={() => handleEdit(space)}
                     className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
                   >
-                    Edit
+                    編集
                   </button>
                   <button
                     onClick={() => handleDelete(space.id)}
                     className="px-3 py-1 text-sm text-red-500 hover:bg-red-50 rounded"
                   >
-                    Delete
+                    削除
                   </button>
                 </div>
               </div>
@@ -216,17 +256,58 @@ function Settings(): JSX.Element {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">カラー</label>
-              <div className="flex gap-2">
-                {COLORS.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setForm({ ...form, color })}
-                    className={`w-8 h-8 rounded-full border-2 transition-transform ${
-                      form.color === color ? 'border-gray-800 scale-110' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
+              <div className="flex gap-2 flex-wrap items-center">
+                {allColors.map((color) => (
+                  <div key={color} className="relative group">
+                    <button
+                      onClick={() => setForm({ ...form, color })}
+                      className={`w-8 h-8 rounded-full border-2 transition-transform ${
+                        form.color === color ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                    {customColors.includes(color) && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRemoveColor(color) }}
+                        className="absolute -top-1 -right-1 w-4 h-4 bg-gray-600 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
                 ))}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowColorPicker(!showColorPicker)}
+                    className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors"
+                  >
+                    +
+                  </button>
+                  {showColorPicker && (
+                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10 flex flex-col items-center gap-2">
+                      <input
+                        type="color"
+                        value={pickerColor}
+                        onChange={(e) => setPickerColor(e.target.value)}
+                        className="w-16 h-10 cursor-pointer border-0 p-0"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleConfirmColor}
+                          className="px-3 py-1 text-xs bg-peeltask-yellow text-peeltask-text rounded font-medium hover:bg-peeltask-yellow/80 transition-colors"
+                        >
+                          追加
+                        </button>
+                        <button
+                          onClick={() => setShowColorPicker(false)}
+                          className="px-3 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          閉じる
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

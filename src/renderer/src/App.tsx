@@ -16,9 +16,7 @@ function AppLayout(): JSX.Element {
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => navigate('/')}
         >
-          <div className="w-8 h-8 bg-peeltask-yellow rounded-lg flex items-center justify-center">
-            <span className="text-peeltask-text font-bold text-sm">P</span>
-          </div>
+          <img src={new URL('./assets/logo.svg', import.meta.url).href} alt="PeelTask" className="w-8 h-8" />
           <h1 className="text-lg font-bold text-gray-800">PeelTask</h1>
         </div>
         <nav className="flex gap-2">
@@ -30,7 +28,7 @@ function AppLayout(): JSX.Element {
                 : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
-            Dashboard
+            ダッシュボード
           </button>
           <button
             onClick={() => navigate('/settings')}
@@ -40,7 +38,7 @@ function AppLayout(): JSX.Element {
                 : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
-            Settings
+            設定
           </button>
         </nav>
       </header>

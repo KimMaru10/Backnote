@@ -10,14 +10,56 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* StickyCard — 付箋カード */
+/* StickyCard — カード */
 .sticky-card {
-  @apply bg-white rounded-lg shadow-md p-4 border-l-4 transition-all duration-200;
+  @apply bg-white rounded-lg p-4 transition-all duration-200 border border-gray-200 relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   transform-origin: top right;
 }
 
+/* 右上の折れた角 */
+.sticky-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 16px 16px 0;
+  border-color: transparent #f3f4f6 transparent transparent;
+  border-radius: 0 8px 0 0;
+  transition: border-width 0.3s ease;
+}
+
 .sticky-card:hover {
-  @apply shadow-lg -translate-y-0.5;
+  transform: translateY(-3px) rotate(-0.5deg);
+  box-shadow: 3px 5px 14px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
+}
+
+.sticky-card:hover::before {
+  border-width: 0 24px 24px 0;
+}
+
+/* めくれた裏の影 */
+.sticky-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  box-shadow: -2px 2px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.sticky-card:hover::after {
+  width: 22px;
+  height: 22px;
+  box-shadow: -3px 3px 5px rgba(0, 0, 0, 0.08);
+  opacity: 1;
 }
 
 /* 付箋剥がしアニメーション */
@@ -39,6 +81,35 @@ body {
 .sticky-card--peel {
   animation: peel 300ms ease-in forwards;
   pointer-events: none;
+}
+
+/* View Transitions — ズーム拡大 */
+::view-transition-old(root) {
+  animation: zoom-out 0.25s ease-in forwards;
+}
+
+::view-transition-new(root) {
+  animation: zoom-in 0.3s ease-out forwards;
+}
+
+@keyframes zoom-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.06); }
+}
+
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 更新ボタン — アイコン回転 */
+@keyframes spin-sync {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sync-icon-spin {
+  animation: spin-sync 0.8s linear infinite;
 }
 
 /* カードスタック — 下のカードが上にスライド */
