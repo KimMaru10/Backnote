@@ -1,8 +1,32 @@
 import { useState, useEffect } from 'react'
+
+const SYNC_MESSAGES = [
+  '課題を更新しています...',
+  '今日も一日がんばろう！',
+  'コーヒーでも飲みながら待ってね☕',
+  '気分転換も大事だよ',
+  'タスクを整理中...',
+  '優先度を計算しています...',
+  'Backlogと通信中...',
+  '深呼吸してリラックス',
+  'あと少しで完了します...',
+  'いい感じに進んでるね！',
+  '今週もあと少し！',
+  'ストレッチしてみない？',
+  '水分補給も忘れずに💧',
+  '集中力が大事！',
+  'もうすぐ終わるよ...',
+]
+
+function getRandomSyncMessage(): string {
+  return SYNC_MESSAGES[Math.floor(Math.random() * SYNC_MESSAGES.length)]
+}
+import Lottie from 'lottie-react'
 import type { Task, Space } from '../types/Task'
 import ListView from '../components/ListView'
 import GanttChart from '../components/GanttChart'
 import CalendarView from '../components/CalendarView'
+import loadingAnimation from '../assets/loading-animation.json'
 
 type ViewMode = 'list' | 'gantt' | 'calendar'
 
@@ -11,8 +35,21 @@ function Dashboard(): JSX.Element {
   const [spaces, setSpaces] = useState<Space[]>([])
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [slideDir, setSlideDir] = useState<'left' | 'right'>('right')
+  const [slideKey, setSlideKey] = useState(0)
+
+  const VIEW_ORDER: ViewMode[] = ['list', 'gantt', 'calendar']
+
+  const handleViewChange = (next: ViewMode): void => {
+    const currentIdx = VIEW_ORDER.indexOf(viewMode)
+    const nextIdx = VIEW_ORDER.indexOf(next)
+    setSlideDir(nextIdx > currentIdx ? 'right' : 'left')
+    setViewMode(next)
+    setSlideKey((k) => k + 1)
+  }
 
   const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
 
@@ -52,7 +89,10 @@ function Dashboard(): JSX.Element {
 
   const handleSync = async (): Promise<void> => {
     setSyncing(true)
+    setSyncMessage(getRandomSyncMessage())
     setError(null)
+    const minLoadingMs = 3000
+    const startTime = Date.now()
     try {
       const res = await fetch(`${backendUrl}/api/sync`, { method: 'POST' })
       if (!res.ok) throw new Error('sync failed')
@@ -65,6 +105,11 @@ function Dashboard(): JSX.Element {
     } catch (_err: unknown) {
       setError('同期に失敗しました。バックエンドが起動しているか確認してください。')
     } finally {
+      const elapsed = Date.now() - startTime
+      const remaining = minLoadingMs - elapsed
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining))
+      }
       setSyncing(false)
     }
   }
@@ -88,7 +133,7 @@ function Dashboard(): JSX.Element {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
+        <h2 className="text-2xl font-bold text-gray-800">ダッシュボード</h2>
         <div className="flex items-center gap-4">
           {lastSyncedAt && (
             <span className="text-sm text-gray-500">
@@ -97,7 +142,7 @@ function Dashboard(): JSX.Element {
           )}
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => handleViewChange('list')}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
               }`}
@@ -105,7 +150,7 @@ function Dashboard(): JSX.Element {
               リスト
             </button>
             <button
-              onClick={() => setViewMode('gantt')}
+              onClick={() => handleViewChange('gantt')}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'gantt' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
               }`}
@@ -113,7 +158,7 @@ function Dashboard(): JSX.Element {
               ガント
             </button>
             <button
-              onClick={() => setViewMode('calendar')}
+              onClick={() => handleViewChange('calendar')}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 viewMode === 'calendar' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
               }`}
@@ -124,9 +169,12 @@ function Dashboard(): JSX.Element {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="px-4 py-2 bg-peeltask-yellow text-peeltask-text rounded-lg font-medium hover:bg-peeltask-yellow/80 disabled:opacity-50 transition-colors"
+            className="px-5 py-2.5 bg-peeltask-yellow text-peeltask-text rounded-xl font-bold shadow-md hover:shadow-lg hover:bg-peeltask-yellow/90 active:scale-95 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2 border-2 border-peeltask-text/20"
           >
-            {syncing ? '同期中...' : 'Sync'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'sync-icon-spin' : ''}>
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            更新
           </button>
         </div>
       </div>
@@ -137,7 +185,16 @@ function Dashboard(): JSX.Element {
         </div>
       )}
 
-      {tasks.length === 0 ? (
+      {syncing ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <Lottie
+            animationData={loadingAnimation}
+            loop
+            style={{ width: 240, height: 240 }}
+          />
+          <p className="text-gray-500 -mt-4 text-base font-medium">{syncMessage}</p>
+        </div>
+      ) : tasks.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
           <div className="w-16 h-16 bg-peeltask-yellow rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-peeltask-text font-bold text-2xl">P</span>
@@ -149,12 +206,16 @@ function Dashboard(): JSX.Element {
             Backlogスペースを登録して、タスクの同期を始めましょう。
           </p>
         </div>
-      ) : viewMode === 'list' ? (
-        <ListView tasks={tasks} spaces={spaces} />
-      ) : viewMode === 'gantt' ? (
-        <GanttChart tasks={tasks} spaces={spaces} />
       ) : (
-        <CalendarView tasks={tasks} spaces={spaces} />
+        <div key={slideKey} className={slideDir === 'right' ? 'tab-slide-right' : 'tab-slide-left'}>
+          {viewMode === 'list' ? (
+            <ListView tasks={tasks} spaces={spaces} />
+          ) : viewMode === 'gantt' ? (
+            <GanttChart tasks={tasks} spaces={spaces} />
+          ) : (
+            <CalendarView tasks={tasks} spaces={spaces} />
+          )}
+        </div>
       )}
     </div>
   )

@@ -13,7 +13,8 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web"
   },
   "dependencies": {
-    "electron-store": "^8.2.0"
+    "electron-store": "^8.2.0",
+    "lottie-react": "^2.4.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-ts": "^2.0.0",
