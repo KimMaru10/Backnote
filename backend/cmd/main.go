@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/handler"
-	"github.com/KimMaru10/PeelTask/backend/internal/service"
-	"github.com/KimMaru10/PeelTask/backend/internal/store"
+	"github.com/KimMaru10/Backnote/backend/internal/handler"
+	"github.com/KimMaru10/Backnote/backend/internal/service"
+	"github.com/KimMaru10/Backnote/backend/internal/store"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -18,7 +18,7 @@ func main() {
 		log.Fatalf("home dir: %v", err)
 	}
 
-	dbDir := filepath.Join(homeDir, ".peeltask")
+	dbDir := filepath.Join(homeDir, ".backnote")
 	if err := os.MkdirAll(dbDir, 0750); err != nil {
 		log.Fatalf("create db dir: %v", err)
 	}
@@ -34,7 +34,7 @@ func main() {
 	syncer.Start()
 	defer syncer.Stop()
 
-	port := os.Getenv("PEELTASK_PORT")
+	port := os.Getenv("BACKNOTE_PORT")
 	if port == "" {
 		port = "8080"
 	}

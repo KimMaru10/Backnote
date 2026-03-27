@@ -118,4 +118,4 @@
 
 ---
 
-*PeelTask 用にカスタマイズ済み（TypeScript + Go + React）*
+*Backnote 用にカスタマイズ済み（TypeScript + Go + React）*

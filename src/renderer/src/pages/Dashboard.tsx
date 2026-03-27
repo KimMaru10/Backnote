@@ -200,7 +200,7 @@ function Dashboard(): JSX.Element {
             <span className="text-peeltask-text font-bold text-2xl">P</span>
           </div>
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            Welcome to PeelTask
+            Welcome to Backnote
           </h3>
           <p className="text-gray-500">
             Backlogスペースを登録して、タスクの同期を始めましょう。

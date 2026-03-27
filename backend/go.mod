@@ -1,4 +1,4 @@
-module github.com/KimMaru10/PeelTask/backend
+module github.com/KimMaru10/Backnote/backend
 
 go 1.24.0
 

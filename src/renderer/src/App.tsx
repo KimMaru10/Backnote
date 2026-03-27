@@ -16,8 +16,8 @@ function AppLayout(): JSX.Element {
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => navigate('/')}
         >
-          <img src={new URL('./assets/logo.svg', import.meta.url).href} alt="PeelTask" className="w-8 h-8" />
-          <h1 className="text-lg font-bold text-gray-800">PeelTask</h1>
+          <img src={new URL('./assets/logo.svg', import.meta.url).href} alt="Backnote" className="w-8 h-8" />
+          <h1 className="text-lg font-bold text-gray-800">Backnote</h1>
         </div>
         <nav className="flex gap-2">
           <button

@@ -1,5 +1,5 @@
 {
-  "name": "peeltask",
+  "name": "backnote",
   "version": "0.1.0",
   "description": "Backlogのタスクを付箋を剥がす感覚で完了していくデスクトップアプリ",
   "main": "./out/main/index.js",

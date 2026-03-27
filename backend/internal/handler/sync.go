@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/model"
-	"github.com/KimMaru10/PeelTask/backend/internal/service"
+	"github.com/KimMaru10/Backnote/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/service"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

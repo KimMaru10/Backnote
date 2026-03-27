@@ -1,5 +1,5 @@
-appId: com.peeltask.app
-productName: PeelTask
+appId: com.backnote.app
+productName: Backnote
 directories:
   buildResources: build
 files:

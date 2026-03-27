@@ -10,7 +10,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    title: 'PeelTask',
+    title: 'Backnote',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -45,7 +45,7 @@ app.whenReady().then(async () => {
     await startBackend()
   } catch (err) {
     dialog.showErrorBox(
-      'PeelTask Backend Error',
+      'Backnote Backend Error',
       `バックエンドの起動に失敗しました: ${err instanceof Error ? err.message : String(err)}`
     )
   }
