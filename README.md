@@ -1,56 +1,46 @@
 # Backnote
 
-<p align="center">
-  <img src="backnote-logo.svg" alt="Backnote Logo" width="120" />
-</p>
+Backlogのタスクをデスクトップで一元管理する進捗管理アプリ。
 
-<p align="center">
-  Backlogのタスクを「付箋を剥がす」感覚で完了していくデスクトップアプリ
-</p>
+複数スペース・プロジェクトのタスクを自動取得し、優先度スコアリングで「今やるべきこと」を可視化します。
 
 ## 特徴
 
-- **複数スペース対応** — Backlog（Nulab）の複数スペースを一元管理
-- **自動スケジュール生成** — 優先度スコアに基づき、1日8時間枠でタスクを自動配置
-- **3種の表示形式** — リスト / ガントチャート / カレンダーを切り替え
-- **付箋剥がしUI** — タスク完了時に付箋がめくれて消えるアニメーション
-- **完全ローカル動作** — データは端末内に保存。外部サーバー不要
+- **複数スペース・プロジェクト対応** — Backlog（Nulab）の複数スペースを横断管理、プロジェクト単位でフィルタリング
+- **優先度スコアリング** — 期限・優先度・工数・マイルストーン・放置度の5要素で自動スコア算出
+- **3種の表示形式** — リスト / ガントチャート / カレンダー（週/月）を切り替え
+- **自分 / 全体切り替え** — 自分の担当タスクとスペース全体を簡単に切り替え
+- **課題詳細 & ローカルメモ** — 課題の詳細確認、Backlogに送信されないローカルメモで進捗管理
+- **Webで見る** — ワンクリックでBacklogの課題ページを直接開く
+- **完全ローカル動作** — データは端末内に保存。外部サーバー不要、プライバシーに配慮
+
+## スクリーンショット
+
+> 準備中
 
 ## 技術スタック
 
 | レイヤー | 技術 |
 |---|---|
 | デスクトップ | Electron（electron-vite） |
-| フロントエンド | React + TailwindCSS |
-| バックエンド | Go（Echo）— localhost:8080 で動作 |
-| データベース | SQLite + GORM |
-| APIキー管理 | electron-store（暗号化保存） |
-
-## フォルダ構成
-
-```
-backnote/
-├── electron/          # Electron Main Process / Preload
-├── renderer/          # React + TailwindCSS（UI）
-├── backend/           # Go（Echo + GORM）
-├── doc/               # 設計書（SUDOモデリング）
-└── assets/
-```
+| フロントエンド | React + TailwindCSS + lucide-react |
+| バックエンド | Go（Echo）— localhost で動作 |
+| データベース | SQLite + GORM（ローカル） |
+| アニメーション | Lottie + View Transitions API |
 
 ## セットアップ
 
 ### 前提条件
 
 - Node.js >= 18
-- Go >= 1.21
-- npm or yarn
+- Go >= 1.23
+- npm
 
 ### インストール
 
 ```bash
-# リポジトリをクローン
-git clone https://github.com/your-org/backnote.git
-cd backnote
+git clone https://github.com/KimMaru10/PeelTask.git
+cd PeelTask
 
 # フロントエンド依存インストール
 npm install
@@ -58,7 +48,7 @@ npm install
 # Goバックエンドビルド
 cd backend
 go mod tidy
-go build -o ../bin/backnote-backend ./cmd/main.go
+go build -o bin/backnote-backend ./cmd/main.go
 cd ..
 ```
 
@@ -68,23 +58,65 @@ cd ..
 npm run dev
 ```
 
+### 配布用ビルド
+
+```bash
+# macOS向け
+npm run dist:mac
+
+# Windows向け
+npm run dist:win
+
+# 全プラットフォーム
+npm run dist
+```
+
 ## 使い方
 
 1. アプリを起動
-2. 設定画面でBacklogスペースのドメインとAPIキーを登録
-3. タスクが自動同期され、スケジュールが生成される
-4. 完了したタスクの付箋を剥がしていく
+2. **設定**画面でBacklogスペースを登録（ドメイン + APIキー）
+3. 必要に応じてプロジェクトを選択
+4. **更新**ボタンでタスクを同期
+5. リスト / ガント / カレンダーで確認
+6. カードクリックで詳細確認、「Webで見る」でBacklogを開く
 
-## 設計書
+詳しくはアプリ内の**ガイド**ページをご覧ください。
 
-[doc/](doc/) フォルダにSUDOモデリングによる設計書があります。
+## スコアリング
 
-| ドキュメント | 内容 |
-|---|---|
-| [システム関連図](doc/system-context.md) | システム構成と通信フロー |
-| [ユースケース図](doc/usecase.md) | ユーザー操作の一覧と詳細 |
-| [ドメインモデル図](doc/domain-model.md) | エンティティの属性と関連 |
-| [オブジェクト図](doc/object-diagram.md) | 具体的なデータ例とスコア計算例 |
+各タスクには5つの要素から優先度スコアが自動計算されます:
+
+| 要素 | 重み | 説明 |
+|---|---|---|
+| 期限緊急度 | 35% | 期限が近いほど高い |
+| 優先度 | 25% | 高=1.0 / 中=0.6 / 低=0.3 |
+| 放置度 | 20% | 作成日からの経過日数が長いほど高い |
+| 工数ペナルティ | 10% | 工数が少ないほど高い |
+| マイルストーン | 10% | 7日以内なら加算 |
+
+## フォルダ構成
+
+```
+PeelTask/
+├── src/
+│   ├── main/              # Electron Main Process
+│   ├── preload/           # IPC ブリッジ
+│   └── renderer/src/      # React（UI）
+│       ├── components/    # StickyCard, ListView, GanttChart, CalendarView
+│       ├── pages/         # Dashboard, Settings, TaskDetail, Guide
+│       ├── types/         # 共通型定義
+│       └── assets/        # CSS, Lottie, ロゴ
+├── backend/               # Go（Echo + GORM）
+│   ├── cmd/main.go
+│   └── internal/
+│       ├── handler/       # APIエンドポイント
+│       ├── model/         # DB モデル
+│       ├── service/       # スコアリング, スケジューラ, Backlog API, 同期
+│       └── store/         # SQLite 接続
+├── scripts/               # ビルドスクリプト
+├── build/                 # アイコン等ビルドリソース
+└── doc/                   # 設計書
+```
 
 ## ライセンス
 
