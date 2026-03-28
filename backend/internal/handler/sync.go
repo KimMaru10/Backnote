@@ -30,7 +30,8 @@ type syncResponse struct {
 }
 
 func (h *SyncHandler) Sync(c echo.Context) error {
-	totalTasks, errs := h.syncer.RunManualSync()
+	mineOnly := c.QueryParam("mode") != "all"
+	totalTasks, errs := h.syncer.RunManualSync(mineOnly)
 
 	resp := syncResponse{
 		TotalTasks: totalTasks,

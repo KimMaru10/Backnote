@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "electron-store": "^8.2.0",
-    "lottie-react": "^2.4.1"
+    "lottie-react": "^2.4.1",
+    "lucide-react": "^1.7.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-ts": "^2.0.0",

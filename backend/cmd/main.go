@@ -23,7 +23,7 @@ func main() {
 		log.Fatalf("create db dir: %v", err)
 	}
 
-	dbPath := filepath.Join(dbDir, "peeltask.db")
+	dbPath := filepath.Join(dbDir, "backnote.db")
 	db, err := store.NewDatabase(dbPath)
 	if err != nil {
 		log.Fatalf("database init: %v", err)
@@ -65,8 +65,10 @@ func main() {
 	api.PUT("/spaces/:id", spaceHandler.Update)
 	api.DELETE("/spaces/:id", spaceHandler.Delete)
 	api.POST("/spaces/test", spaceHandler.TestConnection)
+	api.GET("/spaces/:id/projects", spaceHandler.GetProjects)
+	api.PATCH("/spaces/:id/projects", spaceHandler.UpdateProjects)
 
-	log.Printf("PeelTask backend starting on :%s", port)
+	log.Printf("Backnote backend starting on :%s", port)
 	if err := e.Start(":" + port); err != nil {
 		log.Fatalf("server: %v", err)
 	}

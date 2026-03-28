@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -266,4 +267,61 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 	return c.JSON(http.StatusOK, testConnectionResponse{
 		Success: true,
 	})
+}
+
+type backlogProject struct {
+	ID         int    `json:"id"`
+	ProjectKey string `json:"projectKey"`
+	Name       string `json:"name"`
+}
+
+func (h *SpaceHandler) GetProjects(c echo.Context) error {
+	id := c.Param("id")
+
+	var space model.BacklogSpace
+	if err := h.db.First(&space, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "space not found"})
+	}
+
+	url := fmt.Sprintf("https://%s/api/v2/projects?apiKey=%s", space.Domain, space.ApiKeyRef)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, fetchErr := client.Get(url)
+	if fetchErr != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to fetch projects"})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": fmt.Sprintf("Backlog API error: %d", resp.StatusCode)})
+	}
+
+	var projects []backlogProject
+	if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to decode projects"})
+	}
+
+	return c.JSON(http.StatusOK, projects)
+}
+
+func (h *SpaceHandler) UpdateProjects(c echo.Context) error {
+	id := c.Param("id")
+
+	var space model.BacklogSpace
+	if err := h.db.First(&space, id).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "space not found"})
+	}
+
+	var req struct {
+		ProjectIDs string `json:"projectIds"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	space.ProjectIDs = req.ProjectIDs
+	if err := h.db.Save(&space).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to update"})
+	}
+
+	return c.JSON(http.StatusOK, space)
 }

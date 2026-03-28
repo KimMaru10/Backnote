@@ -6,7 +6,14 @@ interface BacklogSpace {
   apiKeyRef: string
   color: string
   displayName: string
+  projectIds: string
   isActive: boolean
+}
+
+interface BacklogProject {
+  id: number
+  projectKey: string
+  name: string
 }
 
 interface SpaceForm {
@@ -47,6 +54,10 @@ function Settings(): JSX.Element {
 
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [pickerColor, setPickerColor] = useState('#8B5CF6')
+  const [projectsSpaceId, setProjectsSpaceId] = useState<number | null>(null)
+  const [projects, setProjects] = useState<BacklogProject[]>([])
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<number>>(new Set())
+  const [projectsLoading, setProjectsLoading] = useState(false)
 
   const handleConfirmColor = (): void => {
     if (!allColors.includes(pickerColor)) {
@@ -56,6 +67,53 @@ function Settings(): JSX.Element {
     }
     setForm((prev) => ({ ...prev, color: pickerColor }))
     setShowColorPicker(false)
+  }
+
+  const handleOpenProjects = async (space: BacklogSpace): Promise<void> => {
+    setProjectsSpaceId(space.id)
+    setProjectsLoading(true)
+    try {
+      const res = await fetch(`${backendUrl}/api/spaces/${space.id}/projects`)
+      if (!res.ok) throw new Error('failed')
+      const data = await res.json()
+      setProjects(data)
+      const currentIds = space.projectIds
+        ? new Set(space.projectIds.split(',').map(Number).filter(Boolean))
+        : new Set<number>()
+      setSelectedProjectIds(currentIds)
+    } catch (_err: unknown) {
+      setProjects([])
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+
+  const handleToggleProject = (projectId: number): void => {
+    setSelectedProjectIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+      return next
+    })
+  }
+
+  const handleSaveProjects = async (): Promise<void> => {
+    if (projectsSpaceId === null) return
+    try {
+      const ids = [...selectedProjectIds].join(',')
+      await fetch(`${backendUrl}/api/spaces/${projectsSpaceId}/projects`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectIds: ids })
+      })
+      setProjectsSpaceId(null)
+      await fetchSpaces()
+    } catch (_err: unknown) {
+      setTestResult('プロジェクトの保存に失敗しました')
+    }
   }
 
   const handleRemoveColor = (color: string): void => {
@@ -196,6 +254,12 @@ function Settings(): JSX.Element {
                 </div>
                 <div className="flex gap-2">
                   <button
+                    onClick={() => handleOpenProjects(space)}
+                    className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                  >
+                    プロジェクト
+                  </button>
+                  <button
                     onClick={() => handleEdit(space)}
                     className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
                   >
@@ -217,6 +281,57 @@ function Settings(): JSX.Element {
           <p className="text-gray-500">スペースが登録されていません。</p>
         )}
       </div>
+
+      {projectsSpaceId !== null && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">
+            プロジェクト選択
+            <span className="text-sm font-normal text-gray-400 ml-2">取得したいプロジェクトを選択</span>
+          </h3>
+          {projectsLoading ? (
+            <p className="text-gray-400 text-sm py-4 text-center">読み込み中...</p>
+          ) : projects.length === 0 ? (
+            <p className="text-gray-400 text-sm py-4 text-center">プロジェクトが見つかりません</p>
+          ) : (
+            <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+              {projects.map((proj) => (
+                <label
+                  key={proj.id}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedProjectIds.has(proj.id)}
+                    onChange={() => handleToggleProject(proj.id)}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm font-mono text-gray-500">{proj.projectKey}</span>
+                  <span className="text-sm text-gray-700">{proj.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-2 border-t">
+            <p className="text-xs text-gray-400">
+              {selectedProjectIds.size === 0 ? '未選択（全プロジェクト取得）' : `${selectedProjectIds.size}件選択中`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveProjects}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+              >
+                保存
+              </button>
+              <button
+                onClick={() => setProjectsSpaceId(null)}
+                className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

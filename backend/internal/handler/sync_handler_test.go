@@ -171,7 +171,7 @@ func TestGetSyncStatus_AfterSync(t *testing.T) {
 		DisplayName: "Test",
 		IsActive:    true,
 	})
-	syncer.RunManualSync()
+	syncer.RunManualSync(true)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", nil)

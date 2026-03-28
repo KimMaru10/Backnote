@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAppContext } from '../App'
 
 const SYNC_MESSAGES = [
   '課題を更新しています...',
@@ -31,6 +32,7 @@ import loadingAnimation from '../assets/loading-animation.json'
 type ViewMode = 'list' | 'gantt' | 'calendar'
 
 function Dashboard(): JSX.Element {
+  const { assigneeMode } = useAppContext()
   const [tasks, setTasks] = useState<Task[]>([])
   const [spaces, setSpaces] = useState<Space[]>([])
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
@@ -94,7 +96,8 @@ function Dashboard(): JSX.Element {
     const minLoadingMs = 3000
     const startTime = Date.now()
     try {
-      const res = await fetch(`${backendUrl}/api/sync`, { method: 'POST' })
+      const modeParam = assigneeMode === 'all' ? '?mode=all' : ''
+      const res = await fetch(`${backendUrl}/api/sync${modeParam}`, { method: 'POST' })
       if (!res.ok) throw new Error('sync failed')
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
@@ -119,6 +122,10 @@ function Dashboard(): JSX.Element {
     fetchSpaces()
     fetchSyncStatus()
   }, [])
+
+  useEffect(() => {
+    handleSync()
+  }, [assigneeMode])
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr)
