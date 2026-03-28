@@ -9,13 +9,13 @@ files:
   - '!electron.vite.config.*'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-extraResources:
-  - from: backend/dist/${os}/${arch}/
-    to: backend
-    filter:
-      - backnote-backend*
 mac:
   icon: build/icon.icns
+  extraResources:
+    - from: backend/dist/darwin/${arch}/
+      to: backend
+      filter:
+        - backnote-backend*
   artifactName: ${name}-${version}-${arch}.${ext}
   target:
     - target: dmg
@@ -24,6 +24,11 @@ mac:
         - arm64
 win:
   icon: build/icon.ico
+  extraResources:
+    - from: backend/dist/win32/x64/
+      to: backend
+      filter:
+        - backnote-backend*
   artifactName: ${name}-${version}-setup.${ext}
   target:
     - target: nsis
@@ -31,6 +36,11 @@ win:
         - x64
 linux:
   icon: build/icon.png
+  extraResources:
+    - from: backend/dist/linux/x64/
+      to: backend
+      filter:
+        - backnote-backend*
   artifactName: ${name}-${version}-${arch}.${ext}
   target:
     - target: AppImage
