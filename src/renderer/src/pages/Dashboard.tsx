@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAppContext } from '../App'
 
 const SYNC_MESSAGES = [
   '課題を更新しています...',
@@ -31,6 +32,7 @@ import loadingAnimation from '../assets/loading-animation.json'
 type ViewMode = 'list' | 'gantt' | 'calendar'
 
 function Dashboard(): JSX.Element {
+  const { assigneeMode } = useAppContext()
   const [tasks, setTasks] = useState<Task[]>([])
   const [spaces, setSpaces] = useState<Space[]>([])
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
@@ -94,7 +96,8 @@ function Dashboard(): JSX.Element {
     const minLoadingMs = 3000
     const startTime = Date.now()
     try {
-      const res = await fetch(`${backendUrl}/api/sync`, { method: 'POST' })
+      const modeParam = assigneeMode === 'all' ? '?mode=all' : ''
+      const res = await fetch(`${backendUrl}/api/sync${modeParam}`, { method: 'POST' })
       if (!res.ok) throw new Error('sync failed')
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
@@ -119,6 +122,10 @@ function Dashboard(): JSX.Element {
     fetchSpaces()
     fetchSyncStatus()
   }, [])
+
+  useEffect(() => {
+    handleSync()
+  }, [assigneeMode])
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr)
@@ -169,7 +176,7 @@ function Dashboard(): JSX.Element {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="px-5 py-2.5 bg-peeltask-yellow text-peeltask-text rounded-xl font-bold shadow-md hover:shadow-lg hover:bg-peeltask-yellow/90 active:scale-95 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2 border-2 border-peeltask-text/20"
+            className="px-3 py-1.5 bg-brand text-white rounded-lg text-sm font-medium shadow-sm hover:shadow hover:bg-brand-dark active:scale-95 disabled:opacity-50 transition-all flex items-center gap-1.5"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'sync-icon-spin' : ''}>
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -196,11 +203,11 @@ function Dashboard(): JSX.Element {
         </div>
       ) : tasks.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-peeltask-yellow rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-peeltask-text font-bold text-2xl">P</span>
+          <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-2xl">P</span>
           </div>
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            Welcome to PeelTask
+            Welcome to Backnote
           </h3>
           <p className="text-gray-500">
             Backlogスペースを登録して、タスクの同期を始めましょう。

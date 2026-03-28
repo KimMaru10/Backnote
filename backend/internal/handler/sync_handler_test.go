@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/model"
-	"github.com/KimMaru10/PeelTask/backend/internal/service"
+	"github.com/KimMaru10/Backnote/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/service"
 	"github.com/labstack/echo/v4"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -171,7 +171,7 @@ func TestGetSyncStatus_AfterSync(t *testing.T) {
 		DisplayName: "Test",
 		IsActive:    true,
 	})
-	syncer.RunManualSync()
+	syncer.RunManualSync(true)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", nil)

@@ -147,7 +147,7 @@ function TaskDetail(): JSX.Element {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 mb-4">{error ?? 'タスクが見つかりません'}</p>
-        <button onClick={() => navigate('/')} className="text-peeltask-text hover:underline">
+        <button onClick={() => navigate('/')} className="text-brand-dark hover:underline">
           ダッシュボードに戻る
         </button>
       </div>
@@ -224,7 +224,7 @@ function TaskDetail(): JSX.Element {
 
             <div className="mb-4">
               <textarea
-                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-peeltask-yellow focus:border-transparent"
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
                 rows={3}
                 placeholder="進捗メモを入力..."
                 value={newMemo}
@@ -241,7 +241,7 @@ function TaskDetail(): JSX.Element {
                 <button
                   onClick={handleAddMemo}
                   disabled={memoSaving || !newMemo.trim()}
-                  className="px-4 py-2 bg-peeltask-yellow text-peeltask-text rounded-lg text-sm font-medium hover:bg-peeltask-yellow/80 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 transition-colors"
                 >
                   {memoSaving ? '保存中...' : '保存'}
                 </button>

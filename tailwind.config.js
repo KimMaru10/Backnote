@@ -4,9 +4,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        sticky: {
-          yellow: '#FAC775',
-          text: '#BA7517'
+        brand: {
+          DEFAULT: '#2C9A7A',
+          light: '#3DB890',
+          dark: '#1F7A5E',
+          text: '#FFFFFF'
         }
       }
     }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/model"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )

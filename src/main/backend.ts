@@ -15,9 +15,9 @@ let backendProcess: ChildProcess | null = null
 
 function getBackendPath(): string {
   if (app.isPackaged) {
-    return join(process.resourcesPath, 'backend', 'peeltask-backend')
+    return join(process.resourcesPath, 'backend', 'backnote-backend')
   }
-  return join(app.getAppPath(), 'backend', 'bin', 'peeltask-backend')
+  return join(app.getAppPath(), 'backend', 'bin', 'backnote-backend')
 }
 
 function waitForHealth(port: number): Promise<void> {
@@ -67,7 +67,7 @@ export async function startBackend(port: number = BACKEND_PORT): Promise<void> {
     backendProcess = spawn(backendPath, [], {
       env: {
         ...process.env,
-        PEELTASK_PORT: String(port)
+        BACKNOTE_PORT: String(port)
       },
       stdio: ['ignore', 'pipe', 'pipe']
     })

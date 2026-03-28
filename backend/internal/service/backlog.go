@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/model"
 )
 
 const (
@@ -84,14 +85,27 @@ func (c *BacklogClient) fetchMyUserID(ctx context.Context, domain string, apiKey
 	return user.ID, nil
 }
 
-func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string) ([]model.Task, error) {
-	myUserID, err := c.fetchMyUserID(ctx, space.Domain, apiKey)
-	if err != nil {
-		return nil, fmt.Errorf("fetch my user ID: %w", err)
+func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string, mineOnly bool) ([]model.Task, error) {
+	url := fmt.Sprintf("https://%s/api/v2/issues?apiKey=%s&count=%d&statusId[]=1&statusId[]=2&statusId[]=3",
+		space.Domain, apiKey, issuesPerPage)
+
+	if mineOnly {
+		myUserID, err := c.fetchMyUserID(ctx, space.Domain, apiKey)
+		if err != nil {
+			return nil, fmt.Errorf("fetch my user ID: %w", err)
+		}
+		url += fmt.Sprintf("&assigneeId[]=%d", myUserID)
 	}
 
-	url := fmt.Sprintf("https://%s/api/v2/issues?apiKey=%s&count=%d&statusId[]=1&statusId[]=2&statusId[]=3&assigneeId[]=%d",
-		space.Domain, apiKey, issuesPerPage, myUserID)
+	// プロジェクトフィルター
+	if space.ProjectIDs != "" {
+		for _, pid := range strings.Split(space.ProjectIDs, ",") {
+			pid = strings.TrimSpace(pid)
+			if pid != "" {
+				url += fmt.Sprintf("&projectId[]=%s", pid)
+			}
+		}
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -170,7 +184,7 @@ type SyncResult struct {
 	Err     error
 }
 
-func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.BacklogSpace, apiKeys map[uint]string) []SyncResult {
+func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.BacklogSpace, apiKeys map[uint]string, mineOnly bool) []SyncResult {
 	results := make([]SyncResult, len(spaces))
 	var wg sync.WaitGroup
 
@@ -185,7 +199,7 @@ func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.Backl
 				return
 			}
 
-			tasks, fetchErr := c.FetchIssues(ctx, sp, apiKey)
+			tasks, fetchErr := c.FetchIssues(ctx, sp, apiKey, mineOnly)
 			results[idx] = SyncResult{SpaceID: sp.ID, Tasks: tasks, Err: fetchErr}
 		}(i, space)
 	}

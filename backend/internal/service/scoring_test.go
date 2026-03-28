@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/model"
 )
 
 func TestCalcDeadlineUrgency(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/handler"
-	"github.com/KimMaru10/PeelTask/backend/internal/service"
-	"github.com/KimMaru10/PeelTask/backend/internal/store"
+	"github.com/KimMaru10/Backnote/backend/internal/handler"
+	"github.com/KimMaru10/Backnote/backend/internal/service"
+	"github.com/KimMaru10/Backnote/backend/internal/store"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -18,12 +18,12 @@ func main() {
 		log.Fatalf("home dir: %v", err)
 	}
 
-	dbDir := filepath.Join(homeDir, ".peeltask")
+	dbDir := filepath.Join(homeDir, ".backnote")
 	if err := os.MkdirAll(dbDir, 0750); err != nil {
 		log.Fatalf("create db dir: %v", err)
 	}
 
-	dbPath := filepath.Join(dbDir, "peeltask.db")
+	dbPath := filepath.Join(dbDir, "backnote.db")
 	db, err := store.NewDatabase(dbPath)
 	if err != nil {
 		log.Fatalf("database init: %v", err)
@@ -34,7 +34,7 @@ func main() {
 	syncer.Start()
 	defer syncer.Stop()
 
-	port := os.Getenv("PEELTASK_PORT")
+	port := os.Getenv("BACKNOTE_PORT")
 	if port == "" {
 		port = "8080"
 	}
@@ -65,8 +65,10 @@ func main() {
 	api.PUT("/spaces/:id", spaceHandler.Update)
 	api.DELETE("/spaces/:id", spaceHandler.Delete)
 	api.POST("/spaces/test", spaceHandler.TestConnection)
+	api.GET("/spaces/:id/projects", spaceHandler.GetProjects)
+	api.PATCH("/spaces/:id/projects", spaceHandler.UpdateProjects)
 
-	log.Printf("PeelTask backend starting on :%s", port)
+	log.Printf("Backnote backend starting on :%s", port)
 	if err := e.Start(":" + port); err != nil {
 		log.Fatalf("server: %v", err)
 	}

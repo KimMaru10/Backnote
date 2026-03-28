@@ -1,7 +1,7 @@
-# PeelTask
+# Backnote
 
 <p align="center">
-  <img src="peeltask-logo.svg" alt="PeelTask Logo" width="120" />
+  <img src="backnote-logo.svg" alt="Backnote Logo" width="120" />
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 ## フォルダ構成
 
 ```
-peeltask/
+backnote/
 ├── electron/          # Electron Main Process / Preload
 ├── renderer/          # React + TailwindCSS（UI）
 ├── backend/           # Go（Echo + GORM）
@@ -49,8 +49,8 @@ peeltask/
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/your-org/peeltask.git
-cd peeltask
+git clone https://github.com/your-org/backnote.git
+cd backnote
 
 # フロントエンド依存インストール
 npm install
@@ -58,7 +58,7 @@ npm install
 # Goバックエンドビルド
 cd backend
 go mod tidy
-go build -o ../bin/peeltask-backend ./cmd/main.go
+go build -o ../bin/backnote-backend ./cmd/main.go
 cd ..
 ```
 

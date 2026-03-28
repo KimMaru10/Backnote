@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/model"
 	"gorm.io/gorm"
 )
 
@@ -70,11 +70,15 @@ func (s *Syncer) LastSyncedAt() *time.Time {
 	return &t
 }
 
-func (s *Syncer) RunManualSync() (int, []string) {
-	return s.runSync()
+func (s *Syncer) RunManualSync(mineOnly bool) (int, []string) {
+	return s.runSync(mineOnly)
 }
 
-func (s *Syncer) runSync() (int, []string) {
+func (s *Syncer) runSync(mineOnly ...bool) (int, []string) {
+	isMineOnly := true
+	if len(mineOnly) > 0 {
+		isMineOnly = mineOnly[0]
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
 
@@ -93,7 +97,7 @@ func (s *Syncer) runSync() (int, []string) {
 		apiKeys[space.ID] = space.ApiKeyRef
 	}
 
-	results := s.backlogClient.FetchAllSpaces(ctx, spaces, apiKeys)
+	results := s.backlogClient.FetchAllSpaces(ctx, spaces, apiKeys, isMineOnly)
 
 	totalTasks := 0
 	var errs []string

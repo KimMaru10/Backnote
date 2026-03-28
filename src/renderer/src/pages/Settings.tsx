@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FolderKanban, Pencil, Trash2 } from 'lucide-react'
 
 interface BacklogSpace {
   id: number
@@ -6,7 +7,14 @@ interface BacklogSpace {
   apiKeyRef: string
   color: string
   displayName: string
+  projectIds: string
   isActive: boolean
+}
+
+interface BacklogProject {
+  id: number
+  projectKey: string
+  name: string
 }
 
 interface SpaceForm {
@@ -47,6 +55,10 @@ function Settings(): JSX.Element {
 
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [pickerColor, setPickerColor] = useState('#8B5CF6')
+  const [projectsSpaceId, setProjectsSpaceId] = useState<number | null>(null)
+  const [projects, setProjects] = useState<BacklogProject[]>([])
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<number>>(new Set())
+  const [projectsLoading, setProjectsLoading] = useState(false)
 
   const handleConfirmColor = (): void => {
     if (!allColors.includes(pickerColor)) {
@@ -56,6 +68,53 @@ function Settings(): JSX.Element {
     }
     setForm((prev) => ({ ...prev, color: pickerColor }))
     setShowColorPicker(false)
+  }
+
+  const handleOpenProjects = async (space: BacklogSpace): Promise<void> => {
+    setProjectsSpaceId(space.id)
+    setProjectsLoading(true)
+    try {
+      const res = await fetch(`${backendUrl}/api/spaces/${space.id}/projects`)
+      if (!res.ok) throw new Error('failed')
+      const data = await res.json()
+      setProjects(data)
+      const currentIds = space.projectIds
+        ? new Set(space.projectIds.split(',').map(Number).filter(Boolean))
+        : new Set<number>()
+      setSelectedProjectIds(currentIds)
+    } catch (_err: unknown) {
+      setProjects([])
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+
+  const handleToggleProject = (projectId: number): void => {
+    setSelectedProjectIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+      return next
+    })
+  }
+
+  const handleSaveProjects = async (): Promise<void> => {
+    if (projectsSpaceId === null) return
+    try {
+      const ids = [...selectedProjectIds].join(',')
+      await fetch(`${backendUrl}/api/spaces/${projectsSpaceId}/projects`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectIds: ids })
+      })
+      setProjectsSpaceId(null)
+      await fetchSpaces()
+    } catch (_err: unknown) {
+      setTestResult('プロジェクトの保存に失敗しました')
+    }
   }
 
   const handleRemoveColor = (color: string): void => {
@@ -170,7 +229,7 @@ function Settings(): JSX.Element {
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-[#FAC775] text-[#BA7517] rounded-lg font-medium hover:bg-[#f5bc5c] transition-colors"
+              className="px-4 py-2 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors"
             >
               + スペースを追加
             </button>
@@ -194,18 +253,27 @@ function Settings(): JSX.Element {
                     <p className="text-sm text-gray-500">{space.domain}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleOpenProjects(space)}
+                    className="p-2 text-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
+                    title="プロジェクト選択"
+                  >
+                    <FolderKanban size={16} />
+                  </button>
                   <button
                     onClick={() => handleEdit(space)}
-                    className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                    className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="編集"
                   >
-                    編集
+                    <Pencil size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(space.id)}
-                    className="px-3 py-1 text-sm text-red-500 hover:bg-red-50 rounded"
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="削除"
                   >
-                    削除
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
@@ -217,6 +285,57 @@ function Settings(): JSX.Element {
           <p className="text-gray-500">スペースが登録されていません。</p>
         )}
       </div>
+
+      {projectsSpaceId !== null && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">
+            プロジェクト選択
+            <span className="text-sm font-normal text-gray-400 ml-2">取得したいプロジェクトを選択</span>
+          </h3>
+          {projectsLoading ? (
+            <p className="text-gray-400 text-sm py-4 text-center">読み込み中...</p>
+          ) : projects.length === 0 ? (
+            <p className="text-gray-400 text-sm py-4 text-center">プロジェクトが見つかりません</p>
+          ) : (
+            <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+              {projects.map((proj) => (
+                <label
+                  key={proj.id}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedProjectIds.has(proj.id)}
+                    onChange={() => handleToggleProject(proj.id)}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm font-mono text-gray-500">{proj.projectKey}</span>
+                  <span className="text-sm text-gray-700">{proj.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-2 border-t">
+            <p className="text-xs text-gray-400">
+              {selectedProjectIds.size === 0 ? '未選択（全プロジェクト取得）' : `${selectedProjectIds.size}件選択中`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveProjects}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+              >
+                保存
+              </button>
+              <button
+                onClick={() => setProjectsSpaceId(null)}
+                className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -231,7 +350,7 @@ function Settings(): JSX.Element {
                 value={form.displayName}
                 onChange={(e) => setForm({ ...form, displayName: e.target.value })}
                 placeholder="開発チームA"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FAC775]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div>
@@ -241,7 +360,7 @@ function Settings(): JSX.Element {
                 value={form.domain}
                 onChange={(e) => setForm({ ...form, domain: e.target.value })}
                 placeholder="your-space.backlog.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FAC775]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div>
@@ -251,7 +370,7 @@ function Settings(): JSX.Element {
                 value={form.apiKeyRef}
                 onChange={(e) => setForm({ ...form, apiKeyRef: e.target.value })}
                 placeholder="Backlog APIキーを入力"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FAC775]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div>
@@ -332,7 +451,7 @@ function Settings(): JSX.Element {
               <button
                 onClick={handleSubmit}
                 disabled={loading || !form.domain || !form.apiKeyRef || !form.displayName}
-                className="px-4 py-2 bg-[#FAC775] text-[#BA7517] rounded-lg font-medium hover:bg-[#f5bc5c] disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark disabled:opacity-50 transition-colors"
               >
                 {editingId ? '更新' : '保存'}
               </button>

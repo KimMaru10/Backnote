@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/KimMaru10/PeelTask/backend/internal/model"
-	"github.com/KimMaru10/PeelTask/backend/internal/service"
+	"github.com/KimMaru10/Backnote/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/service"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -30,7 +30,8 @@ type syncResponse struct {
 }
 
 func (h *SyncHandler) Sync(c echo.Context) error {
-	totalTasks, errs := h.syncer.RunManualSync()
+	mineOnly := c.QueryParam("mode") != "all"
+	totalTasks, errs := h.syncer.RunManualSync(mineOnly)
 
 	resp := syncResponse{
 		TotalTasks: totalTasks,
