@@ -10,7 +10,13 @@
     "postinstall": "electron-builder install-app-deps",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web"
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "build:backend": "bash scripts/build-backend.sh",
+    "build:all": "npm run build:backend && npm run build",
+    "pack": "npm run build:all && electron-builder --dir",
+    "dist": "npm run build:all && electron-builder",
+    "dist:mac": "npm run build:all && electron-builder --mac",
+    "dist:win": "npm run build:all && electron-builder --win"
   },
   "dependencies": {
     "electron-store": "^8.2.0",

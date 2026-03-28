@@ -25,6 +25,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		&model.Schedule{},
 		&model.ScheduleSlot{},
 		&model.Category{},
+		&model.Memo{},
 	); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
