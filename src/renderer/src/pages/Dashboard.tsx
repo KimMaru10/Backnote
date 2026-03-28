@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Settings, HelpCircle } from 'lucide-react'
 import { useAppContext } from '../App'
 
 const SYNC_MESSAGES = [
@@ -33,6 +35,7 @@ type ViewMode = 'list' | 'gantt' | 'calendar'
 
 function Dashboard(): JSX.Element {
   const { assigneeMode } = useAppContext()
+  const navigate = useNavigate()
   const [tasks, setTasks] = useState<Task[]>([])
   const [spaces, setSpaces] = useState<Space[]>([])
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
@@ -202,16 +205,33 @@ function Dashboard(): JSX.Element {
           <p className="text-gray-500 -mt-4 text-base font-medium">{syncMessage}</p>
         </div>
       ) : tasks.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">P</span>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto">
+          <div className="w-20 h-20 bg-brand/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <img src={new URL('../assets/logo.svg', import.meta.url).href} alt="" className="w-12 h-12" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            Welcome to Backnote
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            Backnoteへようこそ
           </h3>
-          <p className="text-gray-500">
-            Backlogスペースを登録して、タスクの同期を始めましょう。
+          <p className="text-gray-500 mb-6">
+            Backlogのタスクをデスクトップで管理しましょう。<br />
+            まずはスペースを登録してください。
           </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigate('/settings')}
+              className="px-6 py-3 bg-brand text-white rounded-xl font-medium hover:bg-brand-dark transition-colors flex items-center justify-center gap-2"
+            >
+              <Settings size={18} />
+              スペースを登録する
+            </button>
+            <button
+              onClick={() => navigate('/guide')}
+              className="px-6 py-3 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <HelpCircle size={18} />
+              はじめての方はこちら
+            </button>
+          </div>
         </div>
       ) : (
         <div key={slideKey} className={slideDir === 'right' ? 'tab-slide-right' : 'tab-slide-left'}>

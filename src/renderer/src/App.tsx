@@ -1,9 +1,10 @@
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { User, Building2, Settings as SettingsIcon, LayoutDashboard } from 'lucide-react'
+import { User, Building2, Settings as SettingsIcon, LayoutDashboard, HelpCircle } from 'lucide-react'
 import { useState, createContext, useContext } from 'react'
 import Dashboard from './pages/Dashboard'
 import Settings from './pages/Settings'
 import TaskDetail from './pages/TaskDetail'
+import Guide from './pages/Guide'
 
 type AssigneeMode = 'mine' | 'all'
 
@@ -54,6 +55,17 @@ function AppLayout(): JSX.Element {
             <SettingsIcon size={16} />
             設定
           </button>
+          <button
+            onClick={() => navigate('/guide')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              isActive('/guide')
+                ? 'bg-gray-100 text-gray-800'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <HelpCircle size={16} />
+            ガイド
+          </button>
         </div>
 
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
@@ -89,6 +101,7 @@ function AppLayout(): JSX.Element {
           <Route path="/" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/tasks/:id" element={<TaskDetail />} />
+          <Route path="/guide" element={<Guide />} />
         </Routes>
       </main>
     </div>
