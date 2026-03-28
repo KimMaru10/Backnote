@@ -5,10 +5,17 @@ directories:
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!backend/*'
   - '!electron.vite.config.*'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+extraResources:
+  - from: backend/dist/${os}/${arch}/
+    to: backend
+    filter:
+      - backnote-backend*
 mac:
+  icon: build/icon.icns
   artifactName: ${name}-${version}-${arch}.${ext}
   target:
     - target: dmg
@@ -16,8 +23,16 @@ mac:
         - x64
         - arm64
 win:
+  icon: build/icon.ico
   artifactName: ${name}-${version}-setup.${ext}
   target:
     - target: nsis
+      arch:
+        - x64
+linux:
+  icon: build/icon.png
+  artifactName: ${name}-${version}-${arch}.${ext}
+  target:
+    - target: AppImage
       arch:
         - x64
