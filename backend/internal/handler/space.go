@@ -110,7 +110,7 @@ func (h *SpaceHandler) Create(c echo.Context) error {
 	}
 
 	if req.Color == "" {
-		req.Color = "#FAC775"
+		req.Color = "#2C9A7A"
 	}
 
 	space := model.BacklogSpace{

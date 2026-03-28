@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FolderKanban, Pencil, Trash2 } from 'lucide-react'
 
 interface BacklogSpace {
   id: number
@@ -228,7 +229,7 @@ function Settings(): JSX.Element {
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-[#FAC775] text-[#BA7517] rounded-lg font-medium hover:bg-[#f5bc5c] transition-colors"
+              className="px-4 py-2 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors"
             >
               + スペースを追加
             </button>
@@ -252,24 +253,27 @@ function Settings(): JSX.Element {
                     <p className="text-sm text-gray-500">{space.domain}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   <button
                     onClick={() => handleOpenProjects(space)}
-                    className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                    className="p-2 text-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
+                    title="プロジェクト選択"
                   >
-                    プロジェクト
+                    <FolderKanban size={16} />
                   </button>
                   <button
                     onClick={() => handleEdit(space)}
-                    className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                    className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="編集"
                   >
-                    編集
+                    <Pencil size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(space.id)}
-                    className="px-3 py-1 text-sm text-red-500 hover:bg-red-50 rounded"
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="削除"
                   >
-                    削除
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
@@ -346,7 +350,7 @@ function Settings(): JSX.Element {
                 value={form.displayName}
                 onChange={(e) => setForm({ ...form, displayName: e.target.value })}
                 placeholder="開発チームA"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FAC775]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div>
@@ -356,7 +360,7 @@ function Settings(): JSX.Element {
                 value={form.domain}
                 onChange={(e) => setForm({ ...form, domain: e.target.value })}
                 placeholder="your-space.backlog.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FAC775]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div>
@@ -366,7 +370,7 @@ function Settings(): JSX.Element {
                 value={form.apiKeyRef}
                 onChange={(e) => setForm({ ...form, apiKeyRef: e.target.value })}
                 placeholder="Backlog APIキーを入力"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FAC775]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
             <div>
@@ -447,7 +451,7 @@ function Settings(): JSX.Element {
               <button
                 onClick={handleSubmit}
                 disabled={loading || !form.domain || !form.apiKeyRef || !form.displayName}
-                className="px-4 py-2 bg-[#FAC775] text-[#BA7517] rounded-lg font-medium hover:bg-[#f5bc5c] disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark disabled:opacity-50 transition-colors"
               >
                 {editingId ? '更新' : '保存'}
               </button>

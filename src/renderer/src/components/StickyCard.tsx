@@ -17,7 +17,7 @@ function getPriorityBadge(priority: string): { label: string; className: string 
     case '高':
       return { label: '高', className: 'bg-rose-600 text-white' }
     case '中':
-      return { label: '中', className: 'bg-slate-500 text-white' }
+      return { label: '中', className: 'bg-orange-500 text-white' }
     case '低':
       return { label: '低', className: 'bg-slate-300 text-slate-600' }
     default:
@@ -69,10 +69,10 @@ export default function StickyCard({
   return (
     <div
       className="sticky-card cursor-pointer"
-      style={{ viewTransitionName: `task-card-${id}` }}
+      style={{ viewTransitionName: `task-card-${id}`, '--card-space-color': `${spaceColor}40` } as React.CSSProperties}
       onClick={handleClick}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 p-1">
         <div className="flex items-center gap-1.5">
           <span
             className="w-2 h-2 rounded-full shrink-0"
