@@ -71,6 +71,18 @@ npm run dist:win
 npm run dist
 ```
 
+## インストール（macOS）
+
+DMG ファイルからインストール後、初回起動時に「"Backnote"は壊れているため開けません」と表示される場合があります。
+
+これは macOS のセキュリティ機能（Gatekeeper）によるもので、アプリ自体に問題はありません。以下の手順で解除できます:
+
+```bash
+xattr -cr /Applications/Backnote.app
+```
+
+実行後、通常どおりアプリを開けるようになります。
+
 ## 使い方
 
 1. アプリを起動
