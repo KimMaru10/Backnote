@@ -65,7 +65,7 @@ func TestSyncer_LastSyncedAt_AfterSync(t *testing.T) {
 	})
 
 	before := time.Now()
-	syncer.RunManualSync(true)
+	syncer.RunManualSync()
 	after := time.Now()
 
 	got := syncer.LastSyncedAt()
@@ -82,7 +82,7 @@ func TestSyncer_RunManualSync_NoSpaces(t *testing.T) {
 	client := NewBacklogClient()
 	syncer := NewSyncer(db, client)
 
-	totalTasks, errs := syncer.RunManualSync(true)
+	totalTasks, errs := syncer.RunManualSync()
 
 	if totalTasks != 0 {
 		t.Errorf("expected 0 tasks, got %d", totalTasks)
@@ -104,7 +104,7 @@ func TestSyncer_RunManualSync_InvalidSpace(t *testing.T) {
 		IsActive:    true,
 	})
 
-	totalTasks, errs := syncer.RunManualSync(true)
+	totalTasks, errs := syncer.RunManualSync()
 
 	if totalTasks != 0 {
 		t.Errorf("expected 0 tasks, got %d", totalTasks)
@@ -124,7 +124,7 @@ func TestSyncer_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			syncer.RunManualSync(true)
+			syncer.RunManualSync()
 			syncer.LastSyncedAt()
 		}()
 	}

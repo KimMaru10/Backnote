@@ -53,6 +53,10 @@ type backlogIssue struct {
 		Name string  `json:"name"`
 		Date *string `json:"date"`
 	} `json:"milestone"`
+	Assignee *struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	} `json:"assignee"`
 	Description string  `json:"description"`
 	Created     *string `json:"created"`
 }
@@ -85,17 +89,9 @@ func (c *BacklogClient) fetchMyUserID(ctx context.Context, domain string, apiKey
 	return user.ID, nil
 }
 
-func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string, mineOnly bool) ([]model.Task, error) {
+func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string) ([]model.Task, error) {
 	url := fmt.Sprintf("https://%s/api/v2/issues?apiKey=%s&count=%d&statusId[]=1&statusId[]=2&statusId[]=3",
 		space.Domain, apiKey, issuesPerPage)
-
-	if mineOnly {
-		myUserID, err := c.fetchMyUserID(ctx, space.Domain, apiKey)
-		if err != nil {
-			return nil, fmt.Errorf("fetch my user ID: %w", err)
-		}
-		url += fmt.Sprintf("&assigneeId[]=%d", myUserID)
-	}
 
 	// プロジェクトフィルター
 	if space.ProjectIDs != "" {
@@ -133,6 +129,11 @@ func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpac
 
 	tasks := make([]model.Task, 0, len(issues))
 	for _, issue := range issues {
+		assigneeID := 0
+		if issue.Assignee != nil {
+			assigneeID = issue.Assignee.ID
+		}
+
 		task := model.Task{
 			IssueKey:       issue.IssueKey,
 			Title:          issue.Summary,
@@ -140,6 +141,7 @@ func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpac
 			Priority:       mapPriority(issue.Priority.ID),
 			EstimatedHours: derefFloat(issue.EstimatedHours),
 			Status:         issue.Status.Name,
+			AssigneeID:     assigneeID,
 			SpaceID:        space.ID,
 			SyncedAt:       time.Now(),
 		}
@@ -179,12 +181,13 @@ func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpac
 }
 
 type SyncResult struct {
-	SpaceID uint
-	Tasks   []model.Task
-	Err     error
+	SpaceID  uint
+	Tasks    []model.Task
+	MyUserID int
+	Err      error
 }
 
-func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.BacklogSpace, apiKeys map[uint]string, mineOnly bool) []SyncResult {
+func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.BacklogSpace, apiKeys map[uint]string) []SyncResult {
 	results := make([]SyncResult, len(spaces))
 	var wg sync.WaitGroup
 
@@ -199,8 +202,13 @@ func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.Backl
 				return
 			}
 
-			tasks, fetchErr := c.FetchIssues(ctx, sp, apiKey, mineOnly)
-			results[idx] = SyncResult{SpaceID: sp.ID, Tasks: tasks, Err: fetchErr}
+			myUserID, userErr := c.fetchMyUserID(ctx, sp.Domain, apiKey)
+			if userErr != nil {
+				log.Printf("warn: failed to fetch my user ID for space %s: %v", sp.Domain, userErr)
+			}
+
+			tasks, fetchErr := c.FetchIssues(ctx, sp, apiKey)
+			results[idx] = SyncResult{SpaceID: sp.ID, Tasks: tasks, MyUserID: myUserID, Err: fetchErr}
 		}(i, space)
 	}
 

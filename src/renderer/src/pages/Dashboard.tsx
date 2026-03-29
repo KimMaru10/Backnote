@@ -58,9 +58,11 @@ function Dashboard(): JSX.Element {
 
   const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
 
-  const fetchTasks = async (): Promise<void> => {
+  const fetchTasks = async (mode?: string): Promise<void> => {
     try {
-      const res = await fetch(`${backendUrl}/api/tasks`)
+      const currentMode = mode ?? assigneeMode
+      const modeParam = currentMode === 'all' ? '?mode=all' : ''
+      const res = await fetch(`${backendUrl}/api/tasks${modeParam}`)
       if (!res.ok) throw new Error('fetch failed')
       const data = await res.json()
       setTasks(Array.isArray(data) ? data : [])
@@ -99,8 +101,7 @@ function Dashboard(): JSX.Element {
     const minLoadingMs = 3000
     const startTime = Date.now()
     try {
-      const modeParam = assigneeMode === 'all' ? '?mode=all' : ''
-      const res = await fetch(`${backendUrl}/api/sync${modeParam}`, { method: 'POST' })
+      const res = await fetch(`${backendUrl}/api/sync`, { method: 'POST' })
       if (!res.ok) throw new Error('sync failed')
       const data = await res.json()
       setLastSyncedAt(data.lastSyncedAt)
@@ -127,7 +128,7 @@ function Dashboard(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    handleSync()
+    fetchTasks(assigneeMode)
   }, [assigneeMode])
 
   const formatDate = (dateStr: string): string => {

@@ -112,7 +112,7 @@ func TestGetTasks_WithData(t *testing.T) {
 	})
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/tasks", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks?mode=all", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -172,7 +172,7 @@ func TestGetSyncStatus_AfterSync(t *testing.T) {
 		DisplayName: "Test",
 		IsActive:    true,
 	})
-	syncer.RunManualSync(true)
+	syncer.RunManualSync()
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", nil)

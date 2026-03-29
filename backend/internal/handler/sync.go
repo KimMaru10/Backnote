@@ -30,8 +30,7 @@ type syncResponse struct {
 }
 
 func (h *SyncHandler) Sync(c echo.Context) error {
-	mineOnly := c.QueryParam("mode") != "all"
-	totalTasks, errs := h.syncer.RunManualSync(mineOnly)
+	totalTasks, errs := h.syncer.RunManualSync()
 
 	resp := syncResponse{
 		TotalTasks: totalTasks,
@@ -47,8 +46,16 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 }
 
 func (h *SyncHandler) GetTasks(c echo.Context) error {
+	query := h.db.Preload(clause.Associations).Order("score DESC")
+
+	if c.QueryParam("mode") != "all" {
+		// 「自分」モード: 各スペースの MyUserID に一致する担当者のタスクのみ返す
+		subQuery := h.db.Model(&model.BacklogSpace{}).Select("my_user_id").Where("is_active = ? AND my_user_id > 0", true)
+		query = query.Where("assignee_id IN (?)", subQuery)
+	}
+
 	var tasks []model.Task
-	if err := h.db.Preload(clause.Associations).Order("score DESC").Find(&tasks).Error; err != nil {
+	if err := query.Find(&tasks).Error; err != nil {
 		log.Printf("error: failed to fetch tasks: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch tasks",

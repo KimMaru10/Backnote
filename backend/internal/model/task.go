@@ -13,6 +13,7 @@ type Task struct {
 	EstimatedHours   float64    `gorm:"default:0" json:"estimatedHours"`
 	DueDate          *time.Time `json:"dueDate"`
 	Status           string     `json:"status"`
+	AssigneeID       int        `gorm:"index;default:0" json:"assigneeId"`
 	SpaceID          uint       `gorm:"index;not null" json:"spaceId"`
 	Score            float64    `gorm:"default:0" json:"score"`
 	MilestoneID      string     `json:"milestoneId"`

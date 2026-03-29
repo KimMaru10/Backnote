@@ -9,6 +9,7 @@ type BacklogSpace struct {
 	Color       string    `gorm:"default:#2C9A7A" json:"color"`
 	DisplayName string    `json:"displayName"`
 	ProjectIDs  string    `gorm:"default:''" json:"projectIds"`
+	MyUserID    int       `gorm:"default:0" json:"myUserId"`
 	IsActive    bool      `gorm:"default:true" json:"isActive"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`

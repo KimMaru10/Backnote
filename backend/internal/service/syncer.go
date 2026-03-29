@@ -70,15 +70,11 @@ func (s *Syncer) LastSyncedAt() *time.Time {
 	return &t
 }
 
-func (s *Syncer) RunManualSync(mineOnly bool) (int, []string) {
-	return s.runSync(mineOnly)
+func (s *Syncer) RunManualSync() (int, []string) {
+	return s.runSync()
 }
 
-func (s *Syncer) runSync(mineOnly ...bool) (int, []string) {
-	isMineOnly := true
-	if len(mineOnly) > 0 {
-		isMineOnly = mineOnly[0]
-	}
+func (s *Syncer) runSync() (int, []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
 
@@ -97,7 +93,7 @@ func (s *Syncer) runSync(mineOnly ...bool) (int, []string) {
 		apiKeys[space.ID] = space.ApiKeyRef
 	}
 
-	results := s.backlogClient.FetchAllSpaces(ctx, spaces, apiKeys, isMineOnly)
+	results := s.backlogClient.FetchAllSpaces(ctx, spaces, apiKeys)
 
 	totalTasks := 0
 	var errs []string
@@ -106,6 +102,11 @@ func (s *Syncer) runSync(mineOnly ...bool) (int, []string) {
 		if result.Err != nil {
 			errs = append(errs, result.Err.Error())
 			continue
+		}
+
+		// MyUserID をスペースに保存
+		if result.MyUserID != 0 {
+			s.db.Model(&model.BacklogSpace{}).Where("id = ?", result.SpaceID).Update("my_user_id", result.MyUserID)
 		}
 
 		// Upsert: 取得したタスクを保存/更新
