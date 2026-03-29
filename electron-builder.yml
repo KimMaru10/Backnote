@@ -1,5 +1,7 @@
 appId: com.backnote.app
 productName: Backnote
+publish:
+  provider: github
 directories:
   buildResources: build
 files:
