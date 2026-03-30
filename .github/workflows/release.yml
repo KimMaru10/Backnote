@@ -33,6 +33,9 @@ jobs:
           GOOS=darwin GOARCH=arm64 go build -o dist/darwin/arm64/backnote-backend ./cmd/main.go
           GOOS=darwin GOARCH=amd64 go build -o dist/darwin/x64/backnote-backend ./cmd/main.go
 
+      - name: Build frontend
+        run: npm run build
+
       - name: Build & publish (macOS)
         run: npx electron-builder --mac --publish always
         env:
@@ -61,6 +64,9 @@ jobs:
           cd backend
           $env:GOOS="windows"; $env:GOARCH="amd64"; go build -o dist/win32/x64/backnote-backend.exe ./cmd/main.go
 
+      - name: Build frontend
+        run: npm run build
+
       - name: Build & publish (Windows)
         run: npx electron-builder --win --publish always
         env:
@@ -88,6 +94,9 @@ jobs:
         run: |
           cd backend
           GOOS=linux GOARCH=amd64 go build -o dist/linux/x64/backnote-backend ./cmd/main.go
+
+      - name: Build frontend
+        run: npm run build
 
       - name: Build & publish (Linux)
         run: npx electron-builder --linux --publish always
