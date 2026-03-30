@@ -1,6 +1,6 @@
 {
   "name": "backnote",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Backlogのタスクを付箋を剥がす感覚で完了していくデスクトップアプリ",
   "main": "./out/main/index.js",
   "scripts": {
