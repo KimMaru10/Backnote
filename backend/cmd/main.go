@@ -46,7 +46,7 @@ func main() {
 
 	healthHandler := handler.NewHealthHandler()
 	syncHandler := handler.NewSyncHandler(db, syncer)
-	spaceHandler := handler.NewSpaceHandler(db)
+	spaceHandler := handler.NewSpaceHandler(db, syncer)
 	scheduleHandler := handler.NewScheduleHandler(db)
 	taskHandler := handler.NewTaskHandler(db)
 

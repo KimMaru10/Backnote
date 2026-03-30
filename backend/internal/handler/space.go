@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KimMaru10/Backnote/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/service"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
@@ -47,11 +48,12 @@ func testBacklogConnection(domain string, apiKey string) error {
 }
 
 type SpaceHandler struct {
-	db *gorm.DB
+	db     *gorm.DB
+	syncer *service.Syncer
 }
 
-func NewSpaceHandler(db *gorm.DB) *SpaceHandler {
-	return &SpaceHandler{db: db}
+func NewSpaceHandler(db *gorm.DB, syncer *service.Syncer) *SpaceHandler {
+	return &SpaceHandler{db: db, syncer: syncer}
 }
 
 type createSpaceRequest struct {
@@ -125,6 +127,11 @@ func (h *SpaceHandler) Create(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to create space",
 		})
+	}
+
+	// スペース登録直後にバックグラウンドで初回同期を実行
+	if h.syncer != nil {
+		go h.syncer.RunManualSync()
 	}
 
 	return c.JSON(http.StatusCreated, space)
