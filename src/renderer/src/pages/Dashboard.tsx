@@ -108,7 +108,7 @@ function Dashboard(): JSX.Element {
       if (data.errors && data.errors.length > 0) {
         setError(`同期エラー: ${data.errors.join(', ')}`)
       }
-      await fetchTasks()
+      await fetchTasks(assigneeMode)
     } catch (_err: unknown) {
       setError('同期に失敗しました。バックエンドが起動しているか確認してください。')
     } finally {
@@ -122,13 +122,9 @@ function Dashboard(): JSX.Element {
   }
 
   useEffect(() => {
-    fetchTasks()
+    fetchTasks(assigneeMode)
     fetchSpaces()
     fetchSyncStatus()
-  }, [])
-
-  useEffect(() => {
-    fetchTasks(assigneeMode)
   }, [assigneeMode])
 
   const formatDate = (dateStr: string): string => {
@@ -179,7 +175,7 @@ function Dashboard(): JSX.Element {
           </div>
           <button
             onClick={handleSync}
-            disabled={syncing}
+            disabled={syncing || spaces.length === 0}
             className="px-3 py-1.5 bg-brand text-white rounded-lg text-sm font-medium shadow-sm hover:shadow hover:bg-brand-dark active:scale-95 disabled:opacity-50 transition-all flex items-center gap-1.5"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'sync-icon-spin' : ''}>
