@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/KimMaru10/Backnote/backend/internal/handler"
 	"github.com/KimMaru10/Backnote/backend/internal/service"
@@ -29,8 +30,13 @@ func main() {
 		log.Fatalf("database init: %v", err)
 	}
 
+	// すべての書き込みは DBWriter goroutine 経由で直列化する。
+	// これにより SQLite の書き込みロック競合（BUSY/LOCKED）を構造的に回避する。
+	writer := store.NewDBWriter(db)
+	defer writer.Stop()
+
 	backlogClient := service.NewBacklogClient()
-	syncer := service.NewSyncer(db, backlogClient)
+	syncer := service.NewSyncer(db, backlogClient, writer)
 	syncer.Start()
 	defer syncer.Stop()
 
@@ -40,15 +46,25 @@ func main() {
 	}
 
 	e := echo.New()
-	e.Use(middleware.Logger())
+	e.HideBanner = true
+	// リクエスト処理時間を含むログを出力（latency が見えるとパフォーマンス問題の切り分けが楽）
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "[${time_rfc3339}] ${method} ${uri} status=${status} latency=${latency_human}\n",
+	}))
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
+	// HTTP サーバーにタイムアウトを設定。
+	// ハングしたリクエストが永遠に接続を握り続けるのを防ぐ。
+	e.Server.ReadTimeout = 30 * time.Second
+	e.Server.WriteTimeout = 60 * time.Second
+	e.Server.IdleTimeout = 120 * time.Second
+
 	healthHandler := handler.NewHealthHandler()
 	syncHandler := handler.NewSyncHandler(db, syncer)
-	spaceHandler := handler.NewSpaceHandler(db, syncer)
+	spaceHandler := handler.NewSpaceHandler(db, syncer, writer)
 	scheduleHandler := handler.NewScheduleHandler(db)
-	taskHandler := handler.NewTaskHandler(db)
+	taskHandler := handler.NewTaskHandler(db, writer)
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)

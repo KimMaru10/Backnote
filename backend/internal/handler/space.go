@@ -12,6 +12,7 @@ import (
 
 	"github.com/KimMaru10/Backnote/backend/internal/model"
 	"github.com/KimMaru10/Backnote/backend/internal/service"
+	"github.com/KimMaru10/Backnote/backend/internal/store"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
@@ -50,10 +51,19 @@ func testBacklogConnection(domain string, apiKey string) error {
 type SpaceHandler struct {
 	db     *gorm.DB
 	syncer *service.Syncer
+	writer *store.DBWriter
 }
 
-func NewSpaceHandler(db *gorm.DB, syncer *service.Syncer) *SpaceHandler {
-	return &SpaceHandler{db: db, syncer: syncer}
+func NewSpaceHandler(db *gorm.DB, syncer *service.Syncer, writer *store.DBWriter) *SpaceHandler {
+	return &SpaceHandler{db: db, syncer: syncer, writer: writer}
+}
+
+// write は writer が設定されていれば writer 経由、未設定なら db 直接（テスト互換）。
+func (h *SpaceHandler) write(fn store.WriteFunc) error {
+	if h.writer != nil {
+		return h.writer.Do(fn)
+	}
+	return h.db.Transaction(fn)
 }
 
 type createSpaceRequest struct {
@@ -123,7 +133,10 @@ func (h *SpaceHandler) Create(c echo.Context) error {
 		IsActive:    true,
 	}
 
-	if err := h.db.Create(&space).Error; err != nil {
+	if err := h.write(func(tx *gorm.DB) error {
+		return tx.Create(&space).Error
+	}); err != nil {
+		store.LogSQLiteError(err, "space.Create")
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to create space",
 		})
@@ -172,7 +185,10 @@ func (h *SpaceHandler) Update(c echo.Context) error {
 		space.DisplayName = req.DisplayName
 	}
 
-	if err := h.db.Save(&space).Error; err != nil {
+	if err := h.write(func(tx *gorm.DB) error {
+		return tx.Save(&space).Error
+	}); err != nil {
+		store.LogSQLiteError(err, "space.Update")
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to update space",
 		})
@@ -184,24 +200,36 @@ func (h *SpaceHandler) Update(c echo.Context) error {
 func (h *SpaceHandler) Delete(c echo.Context) error {
 	id := c.Param("id")
 
-	// スペースに紐づくタスクのメモを先に削除
-	var taskIDs []uint
-	h.db.Model(&model.Task{}).Where("space_id = ?", id).Pluck("id", &taskIDs)
-	if len(taskIDs) > 0 {
-		h.db.Where("task_id IN ?", taskIDs).Delete(&model.Memo{})
-	}
-
-	// スペースに紐づくタスクを削除
-	h.db.Where("space_id = ?", id).Delete(&model.Task{})
-
-	result := h.db.Delete(&model.BacklogSpace{}, id)
-	if result.Error != nil {
-		log.Printf("error: failed to delete space %s: %v", id, result.Error)
+	var rowsAffected int64
+	err := h.write(func(tx *gorm.DB) error {
+		// スペースに紐づくタスクのメモを先に削除
+		var taskIDs []uint
+		if err := tx.Model(&model.Task{}).Where("space_id = ?", id).Pluck("id", &taskIDs).Error; err != nil {
+			return err
+		}
+		if len(taskIDs) > 0 {
+			if err := tx.Where("task_id IN ?", taskIDs).Delete(&model.Memo{}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("space_id = ?", id).Delete(&model.Task{}).Error; err != nil {
+			return err
+		}
+		result := tx.Delete(&model.BacklogSpace{}, id)
+		if result.Error != nil {
+			return result.Error
+		}
+		rowsAffected = result.RowsAffected
+		return nil
+	})
+	if err != nil {
+		store.LogSQLiteError(err, "space.Delete")
+		log.Printf("error: failed to delete space %s: %v", id, err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to delete space",
 		})
 	}
-	if result.RowsAffected == 0 {
+	if rowsAffected == 0 {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "space not found",
 		})
@@ -326,7 +354,10 @@ func (h *SpaceHandler) UpdateProjects(c echo.Context) error {
 	}
 
 	space.ProjectIDs = req.ProjectIDs
-	if err := h.db.Save(&space).Error; err != nil {
+	if err := h.write(func(tx *gorm.DB) error {
+		return tx.Save(&space).Error
+	}); err != nil {
+		store.LogSQLiteError(err, "space.UpdateProjects")
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to update"})
 	}
 

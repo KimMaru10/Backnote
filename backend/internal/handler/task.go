@@ -7,16 +7,25 @@ import (
 	"strings"
 
 	"github.com/KimMaru10/Backnote/backend/internal/model"
+	"github.com/KimMaru10/Backnote/backend/internal/store"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
 type TaskHandler struct {
-	db *gorm.DB
+	db     *gorm.DB
+	writer *store.DBWriter
 }
 
-func NewTaskHandler(db *gorm.DB) *TaskHandler {
-	return &TaskHandler{db: db}
+func NewTaskHandler(db *gorm.DB, writer *store.DBWriter) *TaskHandler {
+	return &TaskHandler{db: db, writer: writer}
+}
+
+func (h *TaskHandler) write(fn store.WriteFunc) error {
+	if h.writer != nil {
+		return h.writer.Do(fn)
+	}
+	return h.db.Transaction(fn)
 }
 
 func (h *TaskHandler) GetTask(c echo.Context) error {
@@ -71,7 +80,10 @@ func (h *TaskHandler) AddMemo(c echo.Context) error {
 		TaskID:  task.ID,
 		Content: req.Content,
 	}
-	if err := h.db.Create(&memo).Error; err != nil {
+	if err := h.write(func(tx *gorm.DB) error {
+		return tx.Create(&memo).Error
+	}); err != nil {
+		store.LogSQLiteError(err, "task.AddMemo")
 		log.Printf("error: failed to create memo for task %s: %v", taskID, err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create memo"})
 	}
@@ -81,12 +93,21 @@ func (h *TaskHandler) AddMemo(c echo.Context) error {
 
 func (h *TaskHandler) DeleteMemo(c echo.Context) error {
 	memoID := c.Param("memoId")
-	result := h.db.Delete(&model.Memo{}, memoID)
-	if result.Error != nil {
-		log.Printf("error: failed to delete memo %s: %v", memoID, result.Error)
+	var rowsAffected int64
+	err := h.write(func(tx *gorm.DB) error {
+		result := tx.Delete(&model.Memo{}, memoID)
+		if result.Error != nil {
+			return result.Error
+		}
+		rowsAffected = result.RowsAffected
+		return nil
+	})
+	if err != nil {
+		store.LogSQLiteError(err, "task.DeleteMemo")
+		log.Printf("error: failed to delete memo %s: %v", memoID, err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to delete memo"})
 	}
-	if result.RowsAffected == 0 {
+	if rowsAffected == 0 {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "memo not found"})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"status": "deleted"})

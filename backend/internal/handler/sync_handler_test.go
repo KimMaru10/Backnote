@@ -35,7 +35,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 func TestSync_EmptySpaces(t *testing.T) {
 	db := setupTestDB(t)
 	client := service.NewBacklogClient()
-	syncer := service.NewSyncer(db, client)
+	syncer := service.NewSyncer(db, client, nil)
 	h := NewSyncHandler(db, syncer)
 
 	e := echo.New()
@@ -64,7 +64,7 @@ func TestSync_EmptySpaces(t *testing.T) {
 func TestGetTasks_Empty(t *testing.T) {
 	db := setupTestDB(t)
 	client := service.NewBacklogClient()
-	syncer := service.NewSyncer(db, client)
+	syncer := service.NewSyncer(db, client, nil)
 	h := NewSyncHandler(db, syncer)
 
 	e := echo.New()
@@ -93,7 +93,7 @@ func TestGetTasks_Empty(t *testing.T) {
 func TestGetTasks_WithData(t *testing.T) {
 	db := setupTestDB(t)
 	client := service.NewBacklogClient()
-	syncer := service.NewSyncer(db, client)
+	syncer := service.NewSyncer(db, client, nil)
 	h := NewSyncHandler(db, syncer)
 
 	db.Create(&model.Task{
@@ -138,7 +138,7 @@ func TestGetTasks_WithData(t *testing.T) {
 func TestGetSyncStatus_InitiallyNull(t *testing.T) {
 	db := setupTestDB(t)
 	client := service.NewBacklogClient()
-	syncer := service.NewSyncer(db, client)
+	syncer := service.NewSyncer(db, client, nil)
 	h := NewSyncHandler(db, syncer)
 
 	e := echo.New()
@@ -163,7 +163,7 @@ func TestGetSyncStatus_InitiallyNull(t *testing.T) {
 func TestGetSyncStatus_AfterSync(t *testing.T) {
 	db := setupTestDB(t)
 	client := service.NewBacklogClient()
-	syncer := service.NewSyncer(db, client)
+	syncer := service.NewSyncer(db, client, nil)
 	h := NewSyncHandler(db, syncer)
 
 	db.Create(&model.BacklogSpace{

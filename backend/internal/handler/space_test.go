@@ -27,7 +27,7 @@ func setupSpaceTestDB(t *testing.T) *gorm.DB {
 
 func TestSpaceList_Empty(t *testing.T) {
 	db := setupSpaceTestDB(t)
-	h := NewSpaceHandler(db, nil)
+	h := NewSpaceHandler(db, nil, nil)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/spaces", nil)
@@ -52,7 +52,7 @@ func TestSpaceList_Empty(t *testing.T) {
 
 func TestSpaceCreate_MissingFields(t *testing.T) {
 	db := setupSpaceTestDB(t)
-	h := NewSpaceHandler(db, nil)
+	h := NewSpaceHandler(db, nil, nil)
 
 	e := echo.New()
 	body := `{"domain":"","apiKeyRef":"","displayName":""}`
@@ -71,7 +71,7 @@ func TestSpaceCreate_MissingFields(t *testing.T) {
 
 func TestSpaceDelete_NotFound(t *testing.T) {
 	db := setupSpaceTestDB(t)
-	h := NewSpaceHandler(db, nil)
+	h := NewSpaceHandler(db, nil, nil)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/api/spaces/999", nil)
@@ -90,7 +90,7 @@ func TestSpaceDelete_NotFound(t *testing.T) {
 
 func TestSpaceDelete_CascadeDelete(t *testing.T) {
 	db := setupSpaceTestDB(t)
-	h := NewSpaceHandler(db, nil)
+	h := NewSpaceHandler(db, nil, nil)
 
 	db.Create(&model.BacklogSpace{Domain: "test.backlog.jp", ApiKeyRef: "key", DisplayName: "Test", IsActive: true})
 	db.Create(&model.Task{IssueKey: "T-1", Title: "task1", SpaceID: 1})
@@ -125,7 +125,7 @@ func TestSpaceDelete_CascadeDelete(t *testing.T) {
 
 func TestSpaceUpdate_NotFound(t *testing.T) {
 	db := setupSpaceTestDB(t)
-	h := NewSpaceHandler(db, nil)
+	h := NewSpaceHandler(db, nil, nil)
 
 	e := echo.New()
 	body := `{"displayName":"updated"}`

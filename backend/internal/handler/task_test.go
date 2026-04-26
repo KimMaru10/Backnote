@@ -13,7 +13,7 @@ import (
 
 func TestGetTask_NotFound(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/tasks/999", nil)
@@ -32,7 +32,7 @@ func TestGetTask_NotFound(t *testing.T) {
 
 func TestGetTask_Found(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	db.Create(&model.Task{IssueKey: "T-1", Title: "Test Task", SpaceID: 1})
 
@@ -61,7 +61,7 @@ func TestGetTask_Found(t *testing.T) {
 
 func TestGetMemos_Empty(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	db.Create(&model.Task{IssueKey: "T-1", Title: "Test", SpaceID: 1})
 
@@ -82,7 +82,7 @@ func TestGetMemos_Empty(t *testing.T) {
 
 func TestAddMemo_Success(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	db.Create(&model.Task{IssueKey: "T-1", Title: "Test", SpaceID: 1})
 
@@ -113,7 +113,7 @@ func TestAddMemo_Success(t *testing.T) {
 
 func TestAddMemo_EmptyContent(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	db.Create(&model.Task{IssueKey: "T-1", Title: "Test", SpaceID: 1})
 
@@ -136,7 +136,7 @@ func TestAddMemo_EmptyContent(t *testing.T) {
 
 func TestAddMemo_TaskNotFound(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	e := echo.New()
 	body := `{"content":"test"}`
@@ -157,7 +157,7 @@ func TestAddMemo_TaskNotFound(t *testing.T) {
 
 func TestDeleteMemo_NotFound(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/api/tasks/1/memos/999", nil)
@@ -176,7 +176,7 @@ func TestDeleteMemo_NotFound(t *testing.T) {
 
 func TestDeleteMemo_Success(t *testing.T) {
 	db := setupTestDB(t)
-	h := NewTaskHandler(db)
+	h := NewTaskHandler(db, nil)
 
 	db.Create(&model.Task{IssueKey: "T-1", Title: "Test", SpaceID: 1})
 	db.Create(&model.Memo{TaskID: 1, Content: "to delete"})

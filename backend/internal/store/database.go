@@ -9,8 +9,17 @@ import (
 )
 
 func NewDatabase(dbPath string) (*gorm.DB, error) {
-	// WALモード: 読み書き並行可、busy_timeout: ロック待機、cache=shared: 接続間でキャッシュ共有
-	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=10000&_synchronous=NORMAL&cache=shared", dbPath)
+	// SQLite の安定設定:
+	// - WAL: 読み書き並行可
+	// - busy_timeout=10s: SQLITE_BUSY 時の待機
+	// - synchronous=NORMAL: WAL 下で十分な耐久性を確保しつつ高速化
+	// - cache_size=-20000: ページキャッシュを 20MB に拡張（負値は KB 単位）
+	// 書き込み直列化は DBWriter goroutine で行うため、cache=shared は使わない
+	// （shared cache + WAL は SQLITE_LOCKED が busy_timeout を無視する既知問題がある）
+	dsn := fmt.Sprintf(
+		"%s?_journal_mode=WAL&_busy_timeout=10000&_synchronous=NORMAL&_cache_size=-20000",
+		dbPath,
+	)
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("database open: %w", err)
@@ -20,10 +29,12 @@ func NewDatabase(dbPath string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("database sql.DB: %w", err)
 	}
-	sqlDB.SetMaxOpenConns(2)               // WALモードなら読み+書きで2接続まで安全
-	sqlDB.SetMaxIdleConns(2)               // アイドル接続を維持して再接続コストを回避
-	sqlDB.SetConnMaxLifetime(0)            // 接続を無期限に保持（切断を防止）
-	sqlDB.SetConnMaxIdleTime(0)            // アイドル接続もクローズしない
+	// WAL 下では「書き込み1 + 読み取り複数」が安全に並行できる。
+	// 接続プールに余裕を持たせて、画面操作（読み取り）が同期処理（書き込み）でブロックされにくくする。
+	sqlDB.SetMaxOpenConns(8)    // 同時に開ける接続の上限
+	sqlDB.SetMaxIdleConns(8)    // アイドルでも保持する接続数（再接続コスト回避）
+	sqlDB.SetConnMaxLifetime(0) // 接続を無期限に保持（SQLite はローカルなので切断不要）
+	sqlDB.SetConnMaxIdleTime(0)
 
 	if err := db.AutoMigrate(
 		&model.BacklogSpace{},

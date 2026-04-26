@@ -25,7 +25,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 func TestSyncer_StartStop(t *testing.T) {
 	db := setupTestDB(t)
 	client := NewBacklogClient()
-	syncer := NewSyncer(db, client)
+	syncer := NewSyncer(db, client, nil)
 
 	syncer.Start()
 	time.Sleep(100 * time.Millisecond)
@@ -35,7 +35,7 @@ func TestSyncer_StartStop(t *testing.T) {
 func TestSyncer_StopWithoutStart(t *testing.T) {
 	db := setupTestDB(t)
 	client := NewBacklogClient()
-	syncer := NewSyncer(db, client)
+	syncer := NewSyncer(db, client, nil)
 
 	// Stop without Start should not panic
 	syncer.Stop()
@@ -44,7 +44,7 @@ func TestSyncer_StopWithoutStart(t *testing.T) {
 func TestSyncer_LastSyncedAt_InitiallyNil(t *testing.T) {
 	db := setupTestDB(t)
 	client := NewBacklogClient()
-	syncer := NewSyncer(db, client)
+	syncer := NewSyncer(db, client, nil)
 
 	if got := syncer.LastSyncedAt(); got != nil {
 		t.Errorf("expected nil, got %v", got)
@@ -54,7 +54,7 @@ func TestSyncer_LastSyncedAt_InitiallyNil(t *testing.T) {
 func TestSyncer_LastSyncedAt_AfterSync(t *testing.T) {
 	db := setupTestDB(t)
 	client := NewBacklogClient()
-	syncer := NewSyncer(db, client)
+	syncer := NewSyncer(db, client, nil)
 
 	// スペースを1件追加して同期を実行（スペース0件だと早期リターンで lastSyncedAt が更新されない）
 	db.Create(&model.BacklogSpace{
@@ -80,7 +80,7 @@ func TestSyncer_LastSyncedAt_AfterSync(t *testing.T) {
 func TestSyncer_RunManualSync_NoSpaces(t *testing.T) {
 	db := setupTestDB(t)
 	client := NewBacklogClient()
-	syncer := NewSyncer(db, client)
+	syncer := NewSyncer(db, client, nil)
 
 	totalTasks, errs := syncer.RunManualSync()
 
@@ -95,7 +95,7 @@ func TestSyncer_RunManualSync_NoSpaces(t *testing.T) {
 func TestSyncer_RunManualSync_InvalidSpace(t *testing.T) {
 	db := setupTestDB(t)
 	client := NewBacklogClient()
-	syncer := NewSyncer(db, client)
+	syncer := NewSyncer(db, client, nil)
 
 	db.Create(&model.BacklogSpace{
 		Domain:      "invalid-domain.example.com",
@@ -117,7 +117,7 @@ func TestSyncer_RunManualSync_InvalidSpace(t *testing.T) {
 func TestSyncer_ConcurrentAccess(t *testing.T) {
 	db := setupTestDB(t)
 	client := NewBacklogClient()
-	syncer := NewSyncer(db, client)
+	syncer := NewSyncer(db, client, nil)
 
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
