@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { getScoreLabel } from '../utils/scoreLabel'
 
 interface StickyCardProps {
   id: number
@@ -94,15 +95,24 @@ export default function StickyCard({
           {estimatedHours > 0 && (
             <span>{estimatedHours}h</span>
           )}
-          {dueDateStr && (
+          {dueDateStr ? (
             <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
               {dueDateStr}
             </span>
+          ) : (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+              ⚠️ 期限未設定
+            </span>
           )}
         </div>
-        <span className="text-xs font-mono text-gray-400">
-          {score.toFixed(2)}
-        </span>
+        {(() => {
+          const label = getScoreLabel(score)
+          return (
+            <span className={`text-xs px-2 py-0.5 rounded-full ${label.badgeClass}`}>
+              {label.emoji} {label.text}
+            </span>
+          )
+        })()}
       </div>
     </div>
   )

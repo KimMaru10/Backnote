@@ -58,7 +58,7 @@ const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 
 export default function CalendarView({ tasks, spaces }: CalendarViewProps): JSX.Element {
   const navigate = useNavigate()
-  const [mode, setMode] = useState<CalendarMode>('week')
+  const [mode, setMode] = useState<CalendarMode>('month')
   const [baseDate, setBaseDate] = useState(() => new Date())
 
   const today = useMemo(() => toStartOfDay(new Date()), [])

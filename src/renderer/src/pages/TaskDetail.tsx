@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { flushSync } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Task, Memo, Space } from '../types/Task'
+import { getScoreLabel } from '../utils/scoreLabel'
 
 function linkifyText(text: string): JSX.Element[] {
   const urlPattern = /(https?:\/\/[^\s]+)/g
@@ -302,8 +303,20 @@ function TaskDetail(): JSX.Element {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">スコア</span>
-                <span className="text-sm font-mono text-gray-800">{task.score.toFixed(2)}</span>
+                <span className="text-sm text-gray-500">緊急度</span>
+                {(() => {
+                  const label = getScoreLabel(task.score)
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${label.badgeClass}`}>
+                        {label.emoji} {label.text}
+                      </span>
+                      <span className="text-xs font-mono text-gray-400">
+                        ({task.score.toFixed(2)})
+                      </span>
+                    </div>
+                  )
+                })()}
               </div>
               {space && (
                 <div className="flex items-center justify-between">

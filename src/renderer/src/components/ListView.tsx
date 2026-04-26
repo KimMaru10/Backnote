@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import type { Task, Space } from '../types/Task'
 import StickyCard from './StickyCard'
 
-type TabRange = 'all' | 'overdue' | 'today' | 'week' | 'future'
+type TabRange = 'all' | 'overdue' | 'today' | 'week' | 'future' | 'undated'
 
 interface ListViewProps {
   tasks: Task[]
@@ -35,10 +35,13 @@ function filterTasksByTab(tasks: Task[], tab: TabRange): Task[] {
         return due >= today && due < weekEnd
       })
     case 'future':
+      // 期限未設定は「未設定」タブに分離するので、ここでは期限ありの未来分のみ
       return tasks.filter((t) => {
-        if (!t.dueDate) return true
+        if (!t.dueDate) return false
         return new Date(t.dueDate) >= weekEnd
       })
+    case 'undated':
+      return tasks.filter((t) => !t.dueDate)
   }
 }
 
@@ -47,7 +50,8 @@ const TABS: { key: TabRange; label: string }[] = [
   { key: 'overdue', label: '期限切れ' },
   { key: 'today', label: '今日' },
   { key: 'week', label: '今週' },
-  { key: 'future', label: '未来' }
+  { key: 'future', label: '未来' },
+  { key: 'undated', label: '未設定' }
 ]
 
 function getSpaceColor(spaceId: number, spaces: Space[]): string {
@@ -66,7 +70,7 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
   const [selectedSpaceId, setSelectedSpaceId] = useState<number | null>(null)
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
 
-  const TAB_ORDER: TabRange[] = ['all', 'overdue', 'today', 'week', 'future']
+  const TAB_ORDER: TabRange[] = ['all', 'overdue', 'today', 'week', 'future', 'undated']
 
   const handleTabChange = (next: TabRange): void => {
     const currentIdx = TAB_ORDER.indexOf(activeTab)
@@ -88,6 +92,10 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
 
   const overdueCount = useMemo(
     () => tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()).length,
+    [tasks]
+  )
+  const undatedCount = useMemo(
+    () => tasks.filter((t) => !t.dueDate).length,
     [tasks]
   )
 
@@ -171,6 +179,11 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
             {tab.key === 'overdue' && overdueCount > 0 && (
               <span className="ml-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded-full">
                 {overdueCount}
+              </span>
+            )}
+            {tab.key === 'undated' && undatedCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-amber-500 text-white text-[10px] rounded-full">
+                {undatedCount}
               </span>
             )}
           </button>

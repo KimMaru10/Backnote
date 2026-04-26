@@ -302,6 +302,35 @@ function Guide(): JSX.Element {
           <p className="text-xs text-gray-400 mt-4">
             ※ 放置度: 課題作成日からの経過日数が長いほどスコアが上がります
           </p>
+
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <h3 className="text-base font-semibold text-gray-700 mb-3">緊急度ラベル</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              スコアは下記 5 段階のラベルでカードに表示されます。「上から順にやれば OK」という目安です。
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 w-32 text-center">🔥 今すぐ着手</span>
+                <span className="text-gray-500">スコア 1.0 以上 — 期限・優先度ともに高い</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 w-32 text-center">⚡ これからやろう</span>
+                <span className="text-gray-500">スコア 0.7 〜 1.0 — おすすめの次のタスク</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 w-32 text-center">📅 計画的に</span>
+                <span className="text-gray-500">スコア 0.4 〜 0.7 — 順次対応で OK</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 w-32 text-center">🌱 余裕あり</span>
+                <span className="text-gray-500">スコア 0.2 〜 0.4 — 後回しでも問題なし</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 w-32 text-center">☕ いつでも</span>
+                <span className="text-gray-500">スコア 0.2 未満 — 急ぎではない</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
