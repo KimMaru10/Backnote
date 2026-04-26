@@ -89,9 +89,20 @@ func (c *BacklogClient) fetchMyUserID(ctx context.Context, domain string, apiKey
 	return user.ID, nil
 }
 
-func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string) ([]model.Task, error) {
-	url := fmt.Sprintf("https://%s/api/v2/issues?apiKey=%s&count=%d&statusId[]=1&statusId[]=2&statusId[]=3",
+// FetchIssues は指定スペースの課題を取得する。
+// assigneeID > 0 のときはその担当者のタスクのみ、0 のときはフィルタなしで取得。
+func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpace, apiKey string, assigneeID int) ([]model.Task, error) {
+	// statusId フィルタは付けない:
+	// - 標準ステータス (1=未対応, 2=処理中, 3=処理済み, 4=完了) に加え、
+	//   プロジェクトごとに異なるカスタムステータス（例: レビュー済み）が ID 5+ で存在する
+	// - プロジェクトのカスタムステータスを動的に取得する代わりに、
+	//   全件取得してクライアント側で「完了」を除外する方が汎用的
+	url := fmt.Sprintf("https://%s/api/v2/issues?apiKey=%s&count=%d",
 		space.Domain, apiKey, issuesPerPage)
+
+	if assigneeID > 0 {
+		url += fmt.Sprintf("&assigneeId[]=%d", assigneeID)
+	}
 
 	// プロジェクトフィルター
 	if space.ProjectIDs != "" {
@@ -129,6 +140,11 @@ func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpac
 
 	tasks := make([]model.Task, 0, len(issues))
 	for _, issue := range issues {
+		// 完了タスクは除外（標準 status=4 とローカライズ名「完了」両方をチェック）
+		if issue.Status.Name == model.TaskStatusCompleted {
+			continue
+		}
+
 		assigneeID := 0
 		if issue.Assignee != nil {
 			assigneeID = issue.Assignee.ID
@@ -207,13 +223,46 @@ func (c *BacklogClient) FetchAllSpaces(ctx context.Context, spaces []model.Backl
 				log.Printf("warn: failed to fetch my user ID for space %s: %v", sp.Domain, userErr)
 			}
 
-			tasks, fetchErr := c.FetchIssues(ctx, sp, apiKey)
-			results[idx] = SyncResult{SpaceID: sp.ID, Tasks: tasks, MyUserID: myUserID, Err: fetchErr}
+			// 全体タスク（最近更新の上位 100 件）を取得
+			allTasks, fetchErr := c.FetchIssues(ctx, sp, apiKey, 0)
+
+			// 自分担当のタスクは別途取得して merge する。
+			// Backlog API は count=100 上限のため、自分担当が 100 件以上ある場合でも
+			// 必ず最新 100 件は取得できる。「全体」リストに含まれない自分担当も補完される。
+			if myUserID > 0 {
+				myTasks, myErr := c.FetchIssues(ctx, sp, apiKey, myUserID)
+				if myErr != nil {
+					log.Printf("warn: failed to fetch my tasks for space %s: %v", sp.Domain, myErr)
+				} else {
+					allTasks = mergeTasksByIssueKey(allTasks, myTasks)
+				}
+			}
+
+			results[idx] = SyncResult{SpaceID: sp.ID, Tasks: allTasks, MyUserID: myUserID, Err: fetchErr}
 		}(i, space)
 	}
 
 	wg.Wait()
 	return results
+}
+
+// mergeTasksByIssueKey は IssueKey で重複排除しつつ 2 つのタスクスライスを結合する。
+// b 側（自分担当）のデータを優先し、a 側（全体）に同 IssueKey があれば b で上書き。
+func mergeTasksByIssueKey(a, b []model.Task) []model.Task {
+	indexInA := make(map[string]int, len(a))
+	for i, t := range a {
+		indexInA[t.IssueKey] = i
+	}
+	merged := make([]model.Task, len(a))
+	copy(merged, a)
+	for _, t := range b {
+		if idx, ok := indexInA[t.IssueKey]; ok {
+			merged[idx] = t
+		} else {
+			merged = append(merged, t)
+		}
+	}
+	return merged
 }
 
 func mapPriority(id int) string {
