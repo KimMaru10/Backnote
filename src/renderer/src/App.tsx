@@ -1,6 +1,6 @@
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { User, Building2, Settings as SettingsIcon, LayoutDashboard, HelpCircle } from 'lucide-react'
-import { useState, createContext, useContext } from 'react'
+import { useState, createContext, useContext, useEffect } from 'react'
 import Dashboard from './pages/Dashboard'
 import Settings from './pages/Settings'
 import TaskDetail from './pages/TaskDetail'
@@ -28,6 +28,14 @@ function AppLayout(): JSX.Element {
   const { assigneeMode, setAssigneeMode } = useAppContext()
 
   const isActive = (path: string): boolean => location.pathname === path
+
+  // 通知クリック → main プロセスから navigate イベントを受け取り、該当パスへ遷移
+  useEffect(() => {
+    const off = window.api?.onNavigate?.((path) => {
+      navigate(path)
+    })
+    return off
+  }, [navigate])
 
   return (
     <div className="min-h-screen bg-gray-50">

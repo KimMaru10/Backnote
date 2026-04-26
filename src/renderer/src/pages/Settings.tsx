@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FolderKanban, Pencil, Trash2 } from 'lucide-react'
+import NotificationSettings from '../components/NotificationSettings'
 
 interface BacklogSpace {
   id: number
@@ -465,6 +466,10 @@ function Settings(): JSX.Element {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <NotificationSettings />
+      </div>
     </div>
   )
 }

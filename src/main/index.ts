@@ -1,9 +1,17 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { startBackend, stopBackend, BACKEND_PORT } from './backend'
+import { createTray } from './tray'
+import { startNotifier, stopNotifier } from './notifier'
+
+let mainWindow: BrowserWindow | null = null
+
+function getMainWindow(): BrowserWindow | null {
+  return mainWindow
+}
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
@@ -18,7 +26,16 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
+  })
+
+  // 通常の close は終了せず、ウィンドウを隠して Tray から再表示できるようにする。
+  // 「終了」を選んだときだけ isQuiting フラグを立てて本当に終了。
+  mainWindow.on('close', (event) => {
+    if (!(app as unknown as { isQuiting: boolean }).isQuiting) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -51,18 +68,23 @@ app.whenReady().then(async () => {
   }
 
   createWindow()
+  createTray(getMainWindow)
+  startNotifier(getMainWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    else mainWindow?.show()
   })
 })
 
 app.on('before-quit', () => {
+  ;(app as unknown as { isQuiting: boolean }).isQuiting = true
+  stopNotifier()
   stopBackend()
 })
 
+// Tray 常駐するため window-all-closed では quit しない。
+// （macOS は元々この挙動だが、Windows/Linux でも同じにする）
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  // 何もしない: Tray から再表示するため
 })

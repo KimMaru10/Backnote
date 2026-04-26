@@ -20,6 +20,7 @@ type Task struct {
 	MilestoneDueDate *time.Time `json:"milestoneDueDate"`
 	BacklogCreatedAt *time.Time `json:"backlogCreatedAt"`
 	SyncedAt         time.Time  `json:"syncedAt"`
+	LastNotifiedAt   *time.Time `json:"lastNotifiedAt"`
 	CreatedAt        time.Time  `json:"createdAt"`
 	UpdatedAt        time.Time  `json:"updatedAt"`
 	Categories       []Category `gorm:"many2many:task_categories" json:"categories,omitempty"`

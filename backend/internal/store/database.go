@@ -43,6 +43,7 @@ func NewDatabase(dbPath string) (*gorm.DB, error) {
 		&model.ScheduleSlot{},
 		&model.Category{},
 		&model.Memo{},
+		&model.AppSetting{},
 	); err != nil {
 		return nil, fmt.Errorf("database migrate: %w", err)
 	}
