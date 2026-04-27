@@ -29,6 +29,8 @@ import type { Task, Space } from '../types/Task'
 import ListView from '../components/ListView'
 import GanttChart from '../components/GanttChart'
 import CalendarView from '../components/CalendarView'
+import DailyFocus from '../components/DailyFocus'
+import { useFocus } from '../hooks/useFocus'
 import loadingAnimation from '../assets/loading-animation.json'
 
 type ViewMode = 'list' | 'gantt' | 'calendar'
@@ -36,6 +38,7 @@ type ViewMode = 'list' | 'gantt' | 'calendar'
 function Dashboard(): JSX.Element {
   const { assigneeMode } = useAppContext()
   const navigate = useNavigate()
+  const focus = useFocus()
   const [tasks, setTasks] = useState<Task[]>([])
   const [spaces, setSpaces] = useState<Space[]>([])
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
@@ -232,8 +235,22 @@ function Dashboard(): JSX.Element {
         </div>
       ) : (
         <div key={slideKey} className={slideDir === 'right' ? 'tab-slide-right' : 'tab-slide-left'}>
+          <DailyFocus
+            tasks={tasks}
+            spaces={spaces}
+            entries={focus.entries}
+            loading={focus.loading}
+            onSetEntries={focus.setEntries}
+            onRemove={focus.remove}
+            onComplete={focus.complete}
+          />
           {viewMode === 'list' ? (
-            <ListView tasks={tasks} spaces={spaces} />
+            <ListView
+              tasks={tasks}
+              spaces={spaces}
+              focusedTaskIds={focus.focusedTaskIds}
+              onTogglePin={focus.togglePin}
+            />
           ) : viewMode === 'gantt' ? (
             <GanttChart tasks={tasks} spaces={spaces} />
           ) : (

@@ -68,6 +68,7 @@ func main() {
 	settingHandler := handler.NewSettingHandler(db, writer)
 	notificationHandler := handler.NewNotificationHandler(db, writer)
 	searchHandler := handler.NewSearchHandler(db)
+	focusHandler := handler.NewFocusHandler(db, writer)
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
@@ -91,6 +92,10 @@ func main() {
 	api.GET("/notifications/due", notificationHandler.GetDue)
 	api.POST("/notifications/mark", notificationHandler.Mark)
 	api.GET("/search", searchHandler.Search)
+	api.GET("/focus", focusHandler.Get)
+	api.PUT("/focus", focusHandler.Put)
+	api.POST("/focus/:taskId/complete", focusHandler.Complete)
+	api.DELETE("/focus/:taskId", focusHandler.Remove)
 
 	log.Printf("Backnote backend starting on :%s", port)
 	if err := e.Start(":" + port); err != nil {

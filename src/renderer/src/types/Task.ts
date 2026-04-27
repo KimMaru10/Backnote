@@ -28,3 +28,12 @@ export interface Memo {
   createdAt: string
   updatedAt: string
 }
+
+export interface FocusEntry {
+  id: number
+  date: string
+  taskId: number
+  position: number
+  completedAt: string | null
+  task?: Task
+}

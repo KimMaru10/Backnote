@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { Star } from 'lucide-react'
 import { getScoreLabel } from '../utils/scoreLabel'
 
 interface StickyCardProps {
@@ -11,6 +12,8 @@ interface StickyCardProps {
   dueDate: string | null
   score: number
   spaceColor: string
+  isFocused?: boolean
+  onTogglePin?: (id: number, current: boolean) => void
 }
 
 function getPriorityBadge(priority: string): { label: string; className: string } {
@@ -47,7 +50,9 @@ export default function StickyCard({
   estimatedHours,
   dueDate,
   score,
-  spaceColor
+  spaceColor,
+  isFocused = false,
+  onTogglePin
 }: StickyCardProps): JSX.Element {
   const navigate = useNavigate()
   const priorityBadge = getPriorityBadge(priority)
@@ -81,9 +86,27 @@ export default function StickyCard({
           />
           <span className="text-xs text-gray-400 font-mono">{issueKey}</span>
         </div>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityBadge.className}`}>
-          {priorityBadge.label}
-        </span>
+        <div className="flex items-center gap-1">
+          {onTogglePin && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePin(id, isFocused)
+              }}
+              className={`p-1 rounded transition-colors ${
+                isFocused
+                  ? 'text-amber-500 hover:bg-amber-50'
+                  : 'text-gray-300 hover:text-amber-500 hover:bg-amber-50'
+              }`}
+              title={isFocused ? '今日のフォーカスから外す' : '今日のフォーカスに追加'}
+            >
+              <Star size={14} className={isFocused ? 'fill-amber-500' : ''} />
+            </button>
+          )}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityBadge.className}`}>
+            {priorityBadge.label}
+          </span>
+        </div>
       </div>
 
       <h3 className="text-sm font-semibold text-gray-800 mb-3 line-clamp-2">

@@ -7,6 +7,8 @@ type TabRange = 'all' | 'overdue' | 'today' | 'week' | 'future' | 'undated'
 interface ListViewProps {
   tasks: Task[]
   spaces: Space[]
+  focusedTaskIds?: Set<number>
+  onTogglePin?: (taskId: number, isFocused: boolean) => void
 }
 
 function filterTasksByTab(tasks: Task[], tab: TabRange): Task[] {
@@ -63,7 +65,7 @@ function getProjectKey(issueKey: string): string {
   return issueKey.split('-')[0]
 }
 
-export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element {
+export default function ListView({ tasks, spaces, focusedTaskIds, onTogglePin }: ListViewProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabRange>('all')
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right')
   const [slideKey, setSlideKey] = useState(0)
@@ -208,6 +210,8 @@ export default function ListView({ tasks, spaces }: ListViewProps): JSX.Element 
                 dueDate={task.dueDate}
                 score={task.score}
                 spaceColor={getSpaceColor(task.spaceId, spaces)}
+                isFocused={focusedTaskIds?.has(task.id)}
+                onTogglePin={onTogglePin}
               />
             ))}
           </div>
