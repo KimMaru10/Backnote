@@ -1,4 +1,4 @@
-import { Settings, Globe, Key, FolderKanban, User, Building2, RefreshCw, MessageSquare, BarChart3, Calendar, List } from 'lucide-react'
+import { Settings, Globe, Key, FolderKanban, User, Building2, RefreshCw, MessageSquare, BarChart3, Calendar, List, Bell, Star, Search } from 'lucide-react'
 
 function Guide(): JSX.Element {
   return (
@@ -331,6 +331,88 @@ function Guide(): JSX.Element {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* デイリーフォーカス */}
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <span className="bg-amber-100 text-amber-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">★</span>
+          デイリーフォーカス
+        </h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-sm text-gray-600 mb-3 flex items-center gap-1.5">
+            <Star size={14} className="text-amber-500" />
+            「今日やる 3 つ」をピン留めして、一日の意思決定を支援します
+          </p>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>・初回: <strong>「おすすめ 3 件を採用」</strong>でスコア上位 3 件をワンクリック設定</li>
+            <li>・各タスクカード右上の <strong>★ ボタン</strong>でピン留め / 解除</li>
+            <li>・フォーカスカードの <strong>「✓ 完了」</strong>でその場で完了マーク</li>
+            <li>・日付が変わると翌日のフォーカスは自動でリセット</li>
+          </ul>
+        </div>
+      </section>
+
+      {/* クイックジャンプ */}
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">⌘</span>
+          クイックジャンプ
+        </h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-sm text-gray-600 mb-3 flex items-center gap-1.5">
+            <Search size={14} className="text-blue-500" />
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">⌘K</kbd>
+            <span>でいつでも検索バーを開けます</span>
+          </p>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>・タイトル / IssueKey / メモ本文を横断検索</li>
+            <li>・<kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">↑↓</kbd> でカーソル移動、<kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">↵</kbd> で詳細遷移</li>
+            <li>・<kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">Esc</kbd> で閉じる</li>
+            <li>・ヘッダー右上の<strong>「検索」</strong>ボタンからも開けます</li>
+          </ul>
+        </div>
+      </section>
+
+      {/* 集中モード */}
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <span className="bg-orange-100 text-orange-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">🍅</span>
+          集中モード（ポモドーロ）
+        </h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-sm text-gray-600 mb-3">
+            タスクに集中する時間を作り、作業時間を自動でローカルメモに記録します。
+          </p>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>・タスク詳細ページの<strong>「🍅 集中する」</strong>ボタンで開始</li>
+            <li>・15 / 25 / 45 / 60 分のプリセット選択可</li>
+            <li>・タイマー終了時にデスクトップ通知</li>
+            <li>・完了 / 中断時に作業時間をメモへ自動追記</li>
+            <li>・他のタブやアプリ最小化中も継続</li>
+          </ul>
+        </div>
+      </section>
+
+      {/* 通知設定 */}
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <span className="bg-rose-100 text-rose-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">!</span>
+          通知 / アラート
+        </h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-sm text-gray-600 mb-3 flex items-center gap-1.5">
+            <Bell size={14} className="text-rose-500" />
+            アプリを閉じていてもメニューバー常駐でデスクトップ通知が届きます
+          </p>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>・<strong>期限当日リマインド</strong>: 期限が今日のタスクを通知</li>
+            <li>・<strong>期限切れリマインド</strong>: 期限を過ぎているタスクを通知</li>
+            <li>・<strong>朝のサマリ</strong>: 設定時刻（既定 9:00）に「今日 N 件 / 期限切れ M 件」を 1 通知</li>
+            <li>・通知をクリックすると該当タスクの詳細ページへ遷移</li>
+            <li>・設定画面の<strong>「通知」</strong>セクションで個別 ON/OFF と時刻調整</li>
+          </ul>
         </div>
       </section>
     </div>
