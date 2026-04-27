@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Settings from './pages/Settings'
 import TaskDetail from './pages/TaskDetail'
 import Guide from './pages/Guide'
+import FocusMode from './pages/FocusMode'
 import CommandPalette from './components/CommandPalette'
 import type { Space } from './types/Task'
 
@@ -148,6 +149,7 @@ function AppLayout(): JSX.Element {
           <Route path="/" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/tasks/:id" element={<TaskDetail />} />
+          <Route path="/focus/:id" element={<FocusMode />} />
           <Route path="/guide" element={<Guide />} />
         </Routes>
       </main>

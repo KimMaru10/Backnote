@@ -183,6 +183,13 @@ function TaskDetail(): JSX.Element {
             <span className="text-sm text-gray-400 font-mono">{task.issueKey}</span>
           </div>
           <button
+            onClick={() => navigate(`/focus/${task.id}`)}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-1.5"
+            title="このタスクに集中する（ポモドーロ）"
+          >
+            🍅 集中する
+          </button>
+          <button
             onClick={openInBacklog}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center gap-1.5"
           >
