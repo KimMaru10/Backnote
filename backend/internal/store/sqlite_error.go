@@ -1,32 +1,24 @@
 package store
 
 import (
-	"errors"
 	"log"
-
-	"github.com/mattn/go-sqlite3"
+	"strings"
 )
 
-// LogSQLiteError は SQLite のエラーコードを判別してログ出力する。
-// SQLITE_BUSY と SQLITE_LOCKED は別物で、後者は busy_timeout が効かない既知問題があるため
-// 区別して記録できると問題切り分けに役立つ。
+// LogSQLiteError は SQLite 由来のエラーを操作名つきでログに出す。
+// go-sqlite3 の型を直接参照すると CGO ビルド前提になるため、
+// エラーメッセージの文字列で BUSY / LOCKED / IOERR を簡易判別する。
 func LogSQLiteError(err error, operation string) {
 	if err == nil {
 		return
 	}
-	var sqliteErr sqlite3.Error
-	if !errors.As(err, &sqliteErr) {
-		log.Printf("warn: %s - non-sqlite error: %v", operation, err)
-		return
-	}
-	switch sqliteErr.Code {
-	case sqlite3.ErrBusy:
-		log.Printf("error: %s - SQLITE_BUSY (busy_timeout で待機しても取れず): %v", operation, sqliteErr)
-	case sqlite3.ErrLocked:
-		log.Printf("error: %s - SQLITE_LOCKED (busy_timeout が効かないロック競合): %v", operation, sqliteErr)
-	case sqlite3.ErrIoErr:
-		log.Printf("error: %s - SQLITE_IOERR (extended=%d): %v", operation, sqliteErr.ExtendedCode, sqliteErr)
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "database is locked"):
+		log.Printf("error: %s - SQLITE_BUSY/LOCKED (database is locked): %v", operation, err)
+	case strings.Contains(msg, "disk I/O error"), strings.Contains(msg, "I/O error"):
+		log.Printf("error: %s - SQLITE_IOERR: %v", operation, err)
 	default:
-		log.Printf("error: %s - SQLite code=%d: %v", operation, sqliteErr.Code, sqliteErr)
+		log.Printf("error: %s: %v", operation, err)
 	}
 }
