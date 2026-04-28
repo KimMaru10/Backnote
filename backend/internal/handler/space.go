@@ -304,6 +304,74 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 	})
 }
 
+type spaceInfoResponse struct {
+	Success     bool   `json:"success"`
+	Error       string `json:"error,omitempty"`
+	Name        string `json:"name,omitempty"`
+	SpaceKey    string `json:"spaceKey,omitempty"`
+	ExtractedDomain string `json:"extractedDomain,omitempty"`
+}
+
+// POST /api/spaces/info
+// ドメイン候補（URL も可）と API キーを受け取り、Backlog の /api/v2/space を呼んで
+// スペース名や spaceKey を返す。フォーム自動入力に使う。
+func (h *SpaceHandler) GetSpaceInfo(c echo.Context) error {
+	var req struct {
+		Domain string `json:"domain"`
+		ApiKey string `json:"apiKey"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, spaceInfoResponse{Success: false, Error: "invalid request body"})
+	}
+	if strings.TrimSpace(req.Domain) == "" || strings.TrimSpace(req.ApiKey) == "" {
+		return c.JSON(http.StatusOK, spaceInfoResponse{
+			Success: false,
+			Error:   "ドメインとAPIキーを入力してください",
+		})
+	}
+
+	domain, err := extractBacklogDomain(req.Domain)
+	if err != nil {
+		return c.JSON(http.StatusOK, spaceInfoResponse{Success: false, Error: err.Error()})
+	}
+
+	ctx := c.Request().Context()
+	url := fmt.Sprintf("https://%s/api/v2/space?apiKey=%s", domain, req.ApiKey)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return c.JSON(http.StatusOK, spaceInfoResponse{Success: false, Error: "リクエスト作成に失敗しました"})
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return c.JSON(http.StatusOK, spaceInfoResponse{Success: false, Error: fmt.Sprintf("接続に失敗しました: %s", domain)})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return c.JSON(http.StatusOK, spaceInfoResponse{Success: false, Error: "APIキーが無効です"})
+	}
+	if resp.StatusCode != http.StatusOK {
+		return c.JSON(http.StatusOK, spaceInfoResponse{Success: false, Error: fmt.Sprintf("APIエラー (status: %d)", resp.StatusCode)})
+	}
+
+	var info struct {
+		SpaceKey string `json:"spaceKey"`
+		Name     string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return c.JSON(http.StatusOK, spaceInfoResponse{Success: false, Error: "レスポンスのパースに失敗しました"})
+	}
+
+	return c.JSON(http.StatusOK, spaceInfoResponse{
+		Success:         true,
+		Name:            info.Name,
+		SpaceKey:        info.SpaceKey,
+		ExtractedDomain: domain,
+	})
+}
+
 type backlogProject struct {
 	ID         int    `json:"id"`
 	ProjectKey string `json:"projectKey"`

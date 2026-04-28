@@ -85,6 +85,7 @@ func main() {
 	api.PUT("/spaces/:id", spaceHandler.Update)
 	api.DELETE("/spaces/:id", spaceHandler.Delete)
 	api.POST("/spaces/test", spaceHandler.TestConnection)
+	api.POST("/spaces/info", spaceHandler.GetSpaceInfo)
 	api.GET("/spaces/:id/projects", spaceHandler.GetProjects)
 	api.PATCH("/spaces/:id/projects", spaceHandler.UpdateProjects)
 	api.GET("/settings", settingHandler.Get)

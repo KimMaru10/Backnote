@@ -43,6 +43,14 @@ function saveCustomColors(colors: string[]): void {
 
 const emptyForm: SpaceForm = { domain: '', apiKeyRef: '', color: '#FAC775', displayName: '' }
 
+// 入力からBacklogドメインを抽出（URL や末尾のパスを含んでいてもOK）
+const DOMAIN_PATTERN = /([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.backlog\.(jp|com))/
+
+function extractBacklogDomain(input: string): string | null {
+  const match = input.trim().match(DOMAIN_PATTERN)
+  return match ? match[1] : null
+}
+
 function Settings(): JSX.Element {
   const [spaces, setSpaces] = useState<BacklogSpace[]>([])
   const [form, setForm] = useState<SpaceForm>(emptyForm)
@@ -60,6 +68,7 @@ function Settings(): JSX.Element {
   const [projects, setProjects] = useState<BacklogProject[]>([])
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<number>>(new Set())
   const [projectsLoading, setProjectsLoading] = useState(false)
+  const [autoFetchingInfo, setAutoFetchingInfo] = useState(false)
 
   const handleConfirmColor = (): void => {
     if (!allColors.includes(pickerColor)) {
@@ -142,6 +151,42 @@ function Settings(): JSX.Element {
   useEffect(() => {
     fetchSpaces()
   }, [])
+
+  // ドメイン + API キーが揃ったら自動でスペース名を取得して displayName を埋める。
+  // ユーザーが既に手で入力していたら上書きしない。
+  useEffect(() => {
+    if (editingId !== null) return // 編集中は自動取得しない
+    const extracted = extractBacklogDomain(form.domain)
+    if (!extracted || !form.apiKeyRef.trim()) return
+
+    const ctrl = new AbortController()
+    const timer = setTimeout(async () => {
+      setAutoFetchingInfo(true)
+      try {
+        const res = await fetch(`${backendUrl}/api/spaces/info`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: extracted, apiKey: form.apiKeyRef }),
+          signal: ctrl.signal
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.success && data.name) {
+          setForm((prev) => (prev.displayName.trim() === '' ? { ...prev, displayName: data.name } : prev))
+        }
+      } catch {
+        // ignore (debounce 切替などで cancel)
+      } finally {
+        setAutoFetchingInfo(false)
+      }
+    }, 600)
+
+    return () => {
+      clearTimeout(timer)
+      ctrl.abort()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.domain, form.apiKeyRef, editingId])
 
   const handleTestConnection = async (): Promise<void> => {
     setTestResult(null)
@@ -345,12 +390,17 @@ function Settings(): JSX.Element {
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">表示名</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                表示名
+                {autoFetchingInfo && (
+                  <span className="text-xs font-normal text-gray-400">Backlog から取得中...</span>
+                )}
+              </label>
               <input
                 type="text"
                 value={form.displayName}
                 onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                placeholder="開発チームA"
+                placeholder="（ドメイン + APIキー入力で自動取得されます）"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
@@ -360,9 +410,19 @@ function Settings(): JSX.Element {
                 type="text"
                 value={form.domain}
                 onChange={(e) => setForm({ ...form, domain: e.target.value })}
-                placeholder="your-space.backlog.com"
+                placeholder="your-space.backlog.com（URL を貼り付けても OK）"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
               />
+              {(() => {
+                const extracted = extractBacklogDomain(form.domain)
+                if (!form.domain || !extracted) return null
+                if (extracted === form.domain.trim()) return null
+                return (
+                  <p className="text-xs text-gray-500 mt-1">
+                    → <span className="font-mono text-gray-700">{extracted}</span> として登録されます
+                  </p>
+                )
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">APIキー</label>
