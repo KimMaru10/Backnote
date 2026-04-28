@@ -92,13 +92,15 @@ export default function ListView({ tasks, spaces, focusedTaskIds, onTogglePin }:
 
   const filteredTasks = filterTasksByTab(projectFiltered, activeTab)
 
+  // タブのバッジ件数はスペース・プロジェクトフィルタを反映する。
+  // 全体件数を出すと、フィルタ中の体感件数と乖離して混乱の元になるため。
   const overdueCount = useMemo(
-    () => tasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()).length,
-    [tasks]
+    () => projectFiltered.filter((t) => t.dueDate && new Date(t.dueDate) < new Date()).length,
+    [projectFiltered]
   )
   const undatedCount = useMemo(
-    () => tasks.filter((t) => !t.dueDate).length,
-    [tasks]
+    () => projectFiltered.filter((t) => !t.dueDate).length,
+    [projectFiltered]
   )
 
   // スペースフィルター適用後のプロジェクト一覧を抽出
@@ -218,7 +220,7 @@ export default function ListView({ tasks, spaces, focusedTaskIds, onTogglePin }:
         )}
 
         <div className="mt-4 text-xs text-gray-400 text-right">
-          {filteredTasks.length} / {tasks.length} タスク
+          {filteredTasks.length} / {projectFiltered.length} タスク
         </div>
       </div>
     </div>
