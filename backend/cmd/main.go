@@ -69,6 +69,7 @@ func main() {
 	notificationHandler := handler.NewNotificationHandler(db, writer)
 	searchHandler := handler.NewSearchHandler(db)
 	focusHandler := handler.NewFocusHandler(db, writer)
+	commentHandler := handler.NewCommentHandler(db)
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
@@ -76,6 +77,7 @@ func main() {
 	api.GET("/tasks/:id/memos", taskHandler.GetMemos)
 	api.POST("/tasks/:id/memos", taskHandler.AddMemo)
 	api.DELETE("/tasks/:id/memos/:memoId", taskHandler.DeleteMemo)
+	api.GET("/tasks/:id/comments", commentHandler.Get)
 	api.POST("/sync", syncHandler.Sync)
 	api.GET("/tasks", syncHandler.GetTasks)
 	api.GET("/sync/status", syncHandler.GetSyncStatus)

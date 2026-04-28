@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Task, Memo, Space } from '../types/Task'
 import { getScoreLabel } from '../utils/scoreLabel'
+import BacklogComments from '../components/BacklogComments'
 
 function linkifyText(text: string): JSX.Element[] {
   const urlPattern = /(https?:\/\/[^\s]+)/g
@@ -222,6 +223,9 @@ function TaskDetail(): JSX.Element {
               </div>
             )}
           </div>
+
+          {/* Backlog コメント */}
+          <BacklogComments taskId={task.id} />
 
           {/* メモ */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
