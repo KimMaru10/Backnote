@@ -62,8 +62,8 @@ app.whenReady().then(async () => {
     await startBackend()
   } catch (err) {
     dialog.showErrorBox(
-      'Backnote Backend Error',
-      `バックエンドの起動に失敗しました: ${err instanceof Error ? err.message : String(err)}`
+      'Backnote 起動エラー',
+      `起動に失敗しました。アプリを再起動してください。\n${err instanceof Error ? err.message : String(err)}`
     )
   }
 

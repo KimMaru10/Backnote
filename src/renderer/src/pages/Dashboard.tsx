@@ -72,7 +72,7 @@ function Dashboard(): JSX.Element {
       setError(null)
     } catch (_err: unknown) {
       setTasks([])
-      setError('タスクの取得に失敗しました。バックエンドが起動しているか確認してください。')
+      setError('タスクの取得に失敗しました。アプリを再起動してください。')
     }
   }
 
@@ -113,7 +113,7 @@ function Dashboard(): JSX.Element {
       }
       await fetchTasks(assigneeMode)
     } catch (_err: unknown) {
-      setError('同期に失敗しました。バックエンドが起動しているか確認してください。')
+      setError('同期に失敗しました。アプリを再起動してください。')
     } finally {
       const elapsed = Date.now() - startTime
       const remaining = minLoadingMs - elapsed

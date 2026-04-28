@@ -81,8 +81,8 @@ export async function startBackend(port: number = BACKEND_PORT): Promise<void> {
       backendProcess = null
       if (code !== 0 && code !== null) {
         dialog.showErrorBox(
-          'PeelTask Backend Error',
-          `バックエンドが予期せず終了しました (code: ${code})`
+          'Backnote エラー',
+          `処理が予期せず終了しました。アプリを再起動してください。\n(error code: ${code})`
         )
       }
     })
