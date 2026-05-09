@@ -11,6 +11,14 @@ const api = {
     return () => {
       ipcRenderer.removeListener('navigate', listener)
     }
+  },
+  // Tray の検索メニューから CommandPalette を開く要求
+  onOpenPalette: (handler: () => void): (() => void) => {
+    const listener = (): void => handler()
+    ipcRenderer.on('open-palette', listener)
+    return () => {
+      ipcRenderer.removeListener('open-palette', listener)
+    }
   }
 }
 

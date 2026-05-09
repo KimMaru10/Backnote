@@ -45,6 +45,14 @@ function AppLayout(): JSX.Element {
     return off
   }, [navigate])
 
+  // Tray の「検索」メニュー → CommandPalette を開く
+  useEffect(() => {
+    const off = window.api?.onOpenPalette?.(() => {
+      setPaletteOpen(true)
+    })
+    return off
+  }, [])
+
   // Cmd+K (または Ctrl+K) でクイックジャンプを開く
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {

@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { startBackend, stopBackend, BACKEND_PORT } from './backend'
-import { createTray } from './tray'
+import { createTray, stopTray } from './tray'
 import { startNotifier, stopNotifier } from './notifier'
 
 let mainWindow: BrowserWindow | null = null
@@ -79,6 +79,7 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   ;(app as unknown as { isQuiting: boolean }).isQuiting = true
+  stopTray()
   stopNotifier()
   stopBackend()
 })
