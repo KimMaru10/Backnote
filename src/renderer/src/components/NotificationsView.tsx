@@ -297,12 +297,6 @@ export default function NotificationsView({
   }
 
   const currentTitle = TAB_CONFIG[tab].title
-  const currentTotal =
-    tab === 'notifications'
-      ? notifications.length
-      : tab === 'overdue'
-        ? overdueTasks.length
-        : priorityTasks.length
 
   return (
     <div className="flex h-full bg-white">
@@ -311,13 +305,6 @@ export default function NotificationsView({
         {/* ヘッダー */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200">
           <h2 className="text-base font-semibold text-gray-800">{currentTitle}</h2>
-          {currentTotal > 0 && (
-            <span className="text-xs font-normal text-gray-400">
-              {tab === 'notifications' && unreadCount > 0
-                ? `${unreadCount} 件未読`
-                : `${currentTotal} 件`}
-            </span>
-          )}
           <div className="flex-1" />
           {tab === 'notifications' && (
             <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
