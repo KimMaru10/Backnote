@@ -17,14 +17,15 @@ const sanitizeSchema = {
 }
 
 // Backlog のメンション（@username）を検出して緑色の span に置き換える。
-// 1 文字目: 英字 / アンダースコア / 日本語（ひらがな・カタカナ・漢字）
-// 2 文字目以降: 1 文字目の文字種 + 数字
-// 数字始まりの「@6/10」のような日付風の表記は除外する。
-// Hiragana / Katakana / CJK Unified Ideographs / CJK Compatibility を許容
+// HEAD（1 文字目）: 英字 / アンダースコア / 日本語（ひらがな・カタカナ・漢字）。
+//   数字始まりの「@6/10」のような日付風表記は HEAD で弾く。
+// TAIL（2 文字目以降）は「半角空白 / タブ / 改行 / 敬称（様 さん さま 殿 君 くん ちゃん）」
+//   以外を吸収する。Backlog の表示名には `。` `/` `@` 記号や全角空白も含まれうる
+//   （例: `@PENCIL_佐藤大介@6/10最終出社。大変お世話になりました` で 1 ユーザー名）ので、
+//   敬称ベースで終点を判定する負の先読みで「敬称の直前」までを取り込む。
+//   末尾に残った全角空白だけ後段の trim で削る。
 const MENTION_HEAD = '[A-Za-z_\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]'
-// \u672B\u5C3E\u306B\u5411\u3051\u3066\u306F\u5168\u89D2\u30B9\u30DA\u30FC\u30B9 (U+3000) \u3082\u8A31\u5BB9\u3057\u3066\u3001`\u7C73\u7530\u3000\u9EBB\u8863` \u306E\u3088\u3046\u306A\u6C0F\u540D\u3082 1 \u30E1\u30F3\u30B7\u30E7\u30F3\u306B\u3059\u308B\u3002
-// \u534A\u89D2\u30B9\u30DA\u30FC\u30B9\u304C\u73FE\u308C\u305F\u3089\u305D\u3053\u3067\u30E1\u30F3\u30B7\u30E7\u30F3\u7D42\u4E86\u3002\u672B\u5C3E\u306E\u5168\u89D2\u30B9\u30DA\u30FC\u30B9\u306F\u5F8C\u3067 trim \u3059\u308B\u3002
-const MENTION_TAIL = '[A-Za-z0-9_\u3000\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]*'
+const MENTION_TAIL = '(?:(?![ \\t\\n\\r]|様|さま|さん|殿|君|くん|ちゃん).)*'
 const MENTION_PATTERN = new RegExp('@' + MENTION_HEAD + MENTION_TAIL, 'g')
 
 function highlightMentions(text: string): string {
