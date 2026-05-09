@@ -72,6 +72,7 @@ func main() {
 	commentHandler := handler.NewCommentHandler(db)
 	attachmentHandler := handler.NewAttachmentHandler(db)
 	childrenHandler := handler.NewChildrenHandler(db)
+	backlogNotifHandler := handler.NewBacklogNotificationHandler(db)
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
@@ -98,6 +99,9 @@ func main() {
 	api.PUT("/settings", settingHandler.Update)
 	api.GET("/notifications/due", notificationHandler.GetDue)
 	api.POST("/notifications/mark", notificationHandler.Mark)
+	api.GET("/notifications/backlog", backlogNotifHandler.List)
+	api.GET("/notifications/backlog/count", backlogNotifHandler.Count)
+	api.POST("/notifications/backlog/:spaceId/:id/read", backlogNotifHandler.MarkRead)
 	api.GET("/search", searchHandler.Search)
 	api.GET("/focus", focusHandler.Get)
 	api.PUT("/focus", focusHandler.Put)
