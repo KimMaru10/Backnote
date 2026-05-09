@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Pause, Play, Square, X } from 'lucide-react'
 import type { Task } from '../types/Task'
+import { useFocusTimer } from '../hooks/useFocusTimer'
 
 const PRESETS = [
   { label: '15 分', minutes: 15 },
@@ -16,27 +17,15 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-function formatJaDateTime(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const mm = String(date.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${d} ${hh}:${mm}`
-}
-
 export default function FocusMode(): JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const backendUrl = window.api?.getBackendUrl?.() ?? 'http://localhost:8080'
+  const focus = useFocusTimer()
 
   const [task, setTask] = useState<Task | null>(null)
-  const [presetMin, setPresetMin] = useState(25)
-  const [secondsLeft, setSecondsLeft] = useState(25 * 60)
-  const [running, setRunning] = useState(false)
-  const [completed, setCompleted] = useState(false)
-  const startedAtRef = useRef<Date | null>(null)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  // 開始前の選択時間（セッション開始までは context に書き込まない）
+  const [pendingPresetMin, setPendingPresetMin] = useState(25)
 
   // タスク取得
   useEffect(() => {
@@ -47,104 +36,62 @@ export default function FocusMode(): JSX.Element {
       .catch(() => setTask(null))
   }, [id, backendUrl])
 
-  // タイマー
-  useEffect(() => {
-    if (!running) return
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          // 終了
-          if (intervalRef.current) clearInterval(intervalRef.current)
-          setRunning(false)
-          setCompleted(true)
-          return 0
-        }
-        return s - 1
-      })
-    }, 1000)
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [running])
+  const taskId = task ? task.id : null
+  // 現在のセッションがこのタスク？
+  const session = focus.session
+  const isCurrentTask = session !== null && taskId !== null && session.taskId === taskId
 
-  // タスク完了時に処理
-  useEffect(() => {
-    if (!completed || !task) return
-    const start = startedAtRef.current
-    if (!start) return
-    const minutesWorked = presetMin
-    const memo = `${formatJaDateTime(start)} 〜 ${formatJaDateTime(new Date())} に ${minutesWorked} 分集中しました 🍅`
+  // 表示用のタイマー値: 自分のタスクならセッションから、そうでなければプリセットから
+  const presetMin = isCurrentTask ? session.presetMin : pendingPresetMin
+  const secondsLeft = isCurrentTask ? session.secondsLeft : pendingPresetMin * 60
+  const running = isCurrentTask ? session.running : false
+  const completed = isCurrentTask ? session.completed : false
 
-    // メモを Backlog ローカル DB に追記
-    fetch(`${backendUrl}/api/tasks/${task.id}/memos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: memo })
-    }).catch(() => {
-      // ignore
-    })
-
-    // ネイティブ通知（Notification API）
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      try {
-        new Notification('🍅 集中タイム終了！', { body: `${task.title}\n${minutesWorked} 分お疲れさまでした` })
-      } catch {
-        // ignore
-      }
-    }
-  }, [completed, task, presetMin, backendUrl])
+  const totalSeconds = presetMin * 60
+  const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100
 
   const startTimer = (): void => {
-    setRunning(true)
-    setCompleted(false)
-    if (!startedAtRef.current) {
-      startedAtRef.current = new Date()
-    }
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      void Notification.requestPermission()
+    if (!task) return
+    if (isCurrentTask) {
+      // 既存セッションの再開
+      focus.resume()
+    } else {
+      focus.startSession(task.id, task.title, pendingPresetMin)
     }
   }
 
-  const pauseTimer = (): void => {
-    setRunning(false)
-  }
+  const pauseTimer = (): void => focus.pause()
 
   const stopTimer = (): void => {
     if (running) {
       const ok = window.confirm('集中を中断しますか？経過時間をメモに記録します。')
       if (!ok) return
     }
-    setRunning(false)
-    if (startedAtRef.current && task) {
-      const elapsed = presetMin * 60 - secondsLeft
-      const minutes = Math.max(1, Math.round(elapsed / 60))
-      const memo = `${formatJaDateTime(startedAtRef.current)} 〜 ${formatJaDateTime(new Date())} に ${minutes} 分集中しました（中断）`
-      void fetch(`${backendUrl}/api/tasks/${task.id}/memos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: memo })
-      })
-    }
+    void focus.stopAndRecord()
     navigate(`/tasks/${id}`)
   }
 
-  const resetTimer = (mins: number): void => {
-    setPresetMin(mins)
-    setSecondsLeft(mins * 60)
-    setRunning(false)
-    setCompleted(false)
-    startedAtRef.current = null
+  const handleClose = (): void => {
+    // X はミニタイマーへの最小化。タイマーは継続。
+    navigate(`/tasks/${id}`)
   }
 
-  const totalSeconds = presetMin * 60
-  const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100
+  const choosePreset = (mins: number): void => {
+    if (isCurrentTask && (running || completed || session.startedAt)) {
+      // 既存セッションがあるときはプリセット変更で初期化（確認後）
+      const ok = window.confirm('現在のセッションをリセットして時間を変更しますか？')
+      if (!ok) return
+      focus.cancel()
+    }
+    setPendingPresetMin(mins)
+  }
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center text-white z-40">
       <button
-        onClick={() => navigate(`/tasks/${id}`)}
+        onClick={handleClose}
         className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
-        title="閉じる"
+        title="閉じる（タイマーは継続します）"
       >
         <X size={24} />
       </button>
@@ -191,7 +138,7 @@ export default function FocusMode(): JSX.Element {
             {PRESETS.map((p) => (
               <button
                 key={p.minutes}
-                onClick={() => resetTimer(p.minutes)}
+                onClick={() => choosePreset(p.minutes)}
                 disabled={running}
                 className={`px-4 py-1.5 rounded-full text-sm transition-colors disabled:opacity-50 ${
                   presetMin === p.minutes
@@ -211,7 +158,7 @@ export default function FocusMode(): JSX.Element {
                 className="px-8 py-3 bg-orange-500 hover:bg-orange-600 rounded-full font-semibold flex items-center gap-2 transition-colors"
               >
                 <Play size={20} fill="currentColor" />
-                {secondsLeft === totalSeconds ? '集中スタート' : '再開'}
+                {isCurrentTask && secondsLeft < totalSeconds ? '再開' : '集中スタート'}
               </button>
             ) : (
               <button
@@ -239,6 +186,10 @@ export default function FocusMode(): JSX.Element {
               タスク詳細へ戻る
             </button>
           )}
+
+          <p className="absolute bottom-6 left-0 right-0 text-center text-xs text-gray-500">
+            ✕ で閉じてもタイマーは継続します（右下のミニタイマーから戻れます）
+          </p>
         </>
       )}
     </div>

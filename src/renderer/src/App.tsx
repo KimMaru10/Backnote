@@ -7,6 +7,8 @@ import TaskDetail from './pages/TaskDetail'
 import Guide from './pages/Guide'
 import FocusMode from './pages/FocusMode'
 import CommandPalette from './components/CommandPalette'
+import MiniTimer from './components/MiniTimer'
+import { FocusTimerProvider } from './hooks/useFocusTimer'
 import type { Space } from './types/Task'
 
 type AssigneeMode = 'mine' | 'all'
@@ -143,6 +145,7 @@ function AppLayout(): JSX.Element {
       </header>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} spaces={spaces} />
+      <MiniTimer />
 
       <main className="p-6">
         <Routes>
@@ -162,9 +165,11 @@ function App(): JSX.Element {
 
   return (
     <AppContext.Provider value={{ assigneeMode, setAssigneeMode }}>
-      <HashRouter>
-        <AppLayout />
-      </HashRouter>
+      <FocusTimerProvider>
+        <HashRouter>
+          <AppLayout />
+        </HashRouter>
+      </FocusTimerProvider>
     </AppContext.Provider>
   )
 }
