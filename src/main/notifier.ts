@@ -1,8 +1,9 @@
-import { Notification, BrowserWindow, app } from 'electron'
+import { Notification, BrowserWindow, app, shell } from 'electron'
 import { BACKEND_PORT } from './backend'
 
 const NOTIFICATION_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30分
 const SUMMARY_CHECK_INTERVAL_MS = 60 * 1000 // 1分（朝のサマリ時刻判定用）
+const BACKLOG_POLL_INTERVAL_MS = 2 * 60 * 1000 // Backlog お知らせは 2 分間隔
 const RENOTIFY_AFTER_MS = 6 * 60 * 60 * 1000 // 同じタスクは 6 時間あけて再通知（その日の最初は通知）
 
 type Settings = {
@@ -28,7 +29,29 @@ type DueResponse = {
 
 let dueIntervalId: NodeJS.Timeout | null = null
 let summaryIntervalId: NodeJS.Timeout | null = null
+let backlogIntervalId: NodeJS.Timeout | null = null
 let lastSummaryDate: string | null = null
+
+// Backlog お知らせの OS 通知重複防止用。プロセス内のみ保持。
+// 起動直後の最初の取得で seenBacklogIds を埋め、以降の新着のみ通知する
+// （アプリ起動時に既存未読が一斉通知されてうるさくなるのを防ぐ）。
+const seenBacklogIds = new Set<number>()
+let backlogSeenInitialized = false
+
+type BacklogNotificationItem = {
+  id: number
+  spaceId: number
+  spaceDomain: string
+  alreadyRead: boolean
+  reasonText: string
+  sender: { id: number; name: string; iconUrl: string }
+  issueId: number
+  issueKey: string
+  issueTitle: string
+  excerpt: string
+  createdAt: string
+  localTaskId?: number
+}
 
 function backendUrl(path: string): string {
   return `http://localhost:${BACKEND_PORT}${path}`
@@ -179,9 +202,86 @@ async function checkAndNotifySummary(getMainWindow: () => BrowserWindow | null):
   lastSummaryDate = today
 }
 
+async function fetchBacklogNotifications(): Promise<BacklogNotificationItem[]> {
+  try {
+    const res = await fetch(backendUrl('/api/notifications/backlog'))
+    if (!res.ok) return []
+    const data = (await res.json()) as BacklogNotificationItem[]
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
+function backlogNotificationTitle(n: BacklogNotificationItem): string {
+  const sender = n.sender?.name ?? '不明'
+  switch (n.reasonText) {
+    case 'コメント':
+      return `💬 ${sender} さんからコメント`
+    case '担当者':
+      return `👤 ${sender} さんが担当者に設定`
+    case '更新':
+      return `✏️ ${sender} さんが課題を更新`
+    case 'ファイル':
+      return `📎 ${sender} さんがファイルを添付`
+    default:
+      return `📩 ${sender} さんからお知らせ`
+  }
+}
+
+function showBacklogNotification(
+  n: BacklogNotificationItem,
+  getMainWindow: () => BrowserWindow | null
+): void {
+  const title = backlogNotificationTitle(n)
+  const titleLine = n.issueKey ? `${n.issueKey} ${n.issueTitle}` : n.issueTitle
+  const excerpt = n.excerpt ? `\n${n.excerpt}` : ''
+  const body = `${titleLine}${excerpt}`.slice(0, 240)
+  const notification = new Notification({ title, body })
+  notification.on('click', () => {
+    const win = getMainWindow()
+    if (n.localTaskId && win) {
+      if (!win.isVisible()) win.show()
+      win.focus()
+      win.webContents.send('navigate', `/tasks/${n.localTaskId}`)
+    } else if (n.spaceDomain && n.issueKey) {
+      void shell.openExternal(`https://${n.spaceDomain}/view/${n.issueKey}`)
+    }
+  })
+  notification.show()
+}
+
+async function checkAndNotifyBacklog(getMainWindow: () => BrowserWindow | null): Promise<void> {
+  const settings = await fetchSettings()
+  if (settings.notification_enabled !== 'true') return
+
+  const items = await fetchBacklogNotifications()
+  if (items.length === 0) return
+
+  // 初回取得時は通知を発生させず baseline として ID だけ覚える
+  // （アプリ起動時に既存未読が一斉通知されないようにする）。
+  if (!backlogSeenInitialized) {
+    for (const n of items) {
+      seenBacklogIds.add(n.id)
+    }
+    backlogSeenInitialized = true
+    return
+  }
+
+  // 新着のみ通知。既読のものは静かにスキップ。
+  for (const n of items) {
+    if (seenBacklogIds.has(n.id)) continue
+    seenBacklogIds.add(n.id)
+    if (!n.alreadyRead) {
+      showBacklogNotification(n, getMainWindow)
+    }
+  }
+}
+
 export function startNotifier(getMainWindow: () => BrowserWindow | null): void {
   // 起動直後にも一度実行
   void checkAndNotifyDue(getMainWindow)
+  void checkAndNotifyBacklog(getMainWindow)
 
   if (dueIntervalId) clearInterval(dueIntervalId)
   dueIntervalId = setInterval(() => {
@@ -192,11 +292,20 @@ export function startNotifier(getMainWindow: () => BrowserWindow | null): void {
   summaryIntervalId = setInterval(() => {
     void checkAndNotifySummary(getMainWindow)
   }, SUMMARY_CHECK_INTERVAL_MS)
+
+  if (backlogIntervalId) clearInterval(backlogIntervalId)
+  backlogIntervalId = setInterval(() => {
+    void checkAndNotifyBacklog(getMainWindow)
+  }, BACKLOG_POLL_INTERVAL_MS)
 }
 
 export function stopNotifier(): void {
   if (dueIntervalId) clearInterval(dueIntervalId)
   if (summaryIntervalId) clearInterval(summaryIntervalId)
+  if (backlogIntervalId) clearInterval(backlogIntervalId)
   dueIntervalId = null
   summaryIntervalId = null
+  backlogIntervalId = null
+  seenBacklogIds.clear()
+  backlogSeenInitialized = false
 }
