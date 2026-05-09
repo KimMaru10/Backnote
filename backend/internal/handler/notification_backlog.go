@@ -225,7 +225,7 @@ func (h *BacklogNotificationHandler) activeSpaces() ([]model.BacklogSpace, error
 }
 
 func (h *BacklogNotificationHandler) fetchNotifications(space model.BacklogSpace) ([]backlogNotification, error) {
-	url := fmt.Sprintf("https://%s/api/v2/notifications?apiKey=%s&count=50",
+	url := fmt.Sprintf("https://%s/api/v2/notifications?apiKey=%s&count=20",
 		space.Domain, space.ApiKeyRef)
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Get(url)
