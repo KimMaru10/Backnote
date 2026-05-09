@@ -133,20 +133,6 @@ function AppLayout(): JSX.Element {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setNotifPanelOpen(true)}
-            className="relative p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
-            title="お知らせ"
-            aria-label="お知らせ"
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
-
-          <button
             onClick={() => setPaletteOpen(true)}
             className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
             title="クイックジャンプ"
@@ -182,6 +168,20 @@ function AppLayout(): JSX.Element {
             全体
           </button>
           </div>
+
+          <button
+            onClick={() => setNotifPanelOpen(true)}
+            className="relative p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+            title="お知らせ"
+            aria-label="お知らせ"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
         </div>
       </header>
 
