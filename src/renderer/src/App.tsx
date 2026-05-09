@@ -7,6 +7,7 @@ import TaskDetail from './pages/TaskDetail'
 import Guide from './pages/Guide'
 import FocusMode from './pages/FocusMode'
 import CommandPalette from './components/CommandPalette'
+import BackToTop from './components/BackToTop'
 import MiniTimer from './components/MiniTimer'
 import { FocusTimerProvider } from './hooks/useFocusTimer'
 import type { Space } from './types/Task'
@@ -67,7 +68,7 @@ function AppLayout(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-2.5 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-6 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigate('/')}
@@ -146,6 +147,7 @@ function AppLayout(): JSX.Element {
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} spaces={spaces} />
       <MiniTimer />
+      <BackToTop />
 
       <main className="p-6">
         <Routes>
