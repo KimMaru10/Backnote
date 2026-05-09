@@ -75,12 +75,16 @@ export function createTray(getMainWindow: () => BrowserWindow | null): Tray {
       }
     }
   ])
-  tray.setContextMenu(contextMenu)
 
-  // 左クリックでポップオーバー開閉。右クリック（コンテキスト）は標準メニュー。
+  // setContextMenu を使うと macOS では左クリックでもメニューが出てしまい
+  // ポップオーバーと重なる。右クリック時に明示的に popUpContextMenu を呼ぶ。
   tray.on('click', () => {
     if (!tray) return
     toggleTrayPopover(tray.getBounds())
+  })
+  tray.on('right-click', () => {
+    if (!tray) return
+    tray.popUpContextMenu(contextMenu)
   })
 
   // 30 秒ごとに未読件数を更新（macOS のみバッジ表示）
