@@ -57,8 +57,9 @@ type backlogIssue struct {
 		ID   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"assignee"`
-	Description string  `json:"description"`
-	Created     *string `json:"created"`
+	ParentIssueID *int    `json:"parentIssueId"`
+	Description   string  `json:"description"`
+	Created       *string `json:"created"`
 }
 
 func (c *BacklogClient) fetchMyUserID(ctx context.Context, domain string, apiKey string) (int, error) {
@@ -144,56 +145,67 @@ func (c *BacklogClient) FetchIssues(ctx context.Context, space model.BacklogSpac
 		if issue.Status.Name == model.TaskStatusCompleted {
 			continue
 		}
-
-		assigneeID := 0
-		if issue.Assignee != nil {
-			assigneeID = issue.Assignee.ID
-		}
-
-		task := model.Task{
-			IssueKey:       issue.IssueKey,
-			Title:          issue.Summary,
-			Description:    issue.Description,
-			Priority:       mapPriority(issue.Priority.ID),
-			EstimatedHours: derefFloat(issue.EstimatedHours),
-			Status:         issue.Status.Name,
-			AssigneeID:     assigneeID,
-			SpaceID:        space.ID,
-			SyncedAt:       time.Now(),
-		}
-
-		if issue.Created != nil {
-			t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.Created)
-			if parseErr != nil {
-				log.Printf("warn: failed to parse created date for %s: %v", issue.IssueKey, parseErr)
-			} else {
-				task.BacklogCreatedAt = &t
-			}
-		}
-
-		if issue.DueDate != nil {
-			t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.DueDate)
-			if parseErr != nil {
-				log.Printf("warn: failed to parse dueDate for %s: %v", issue.IssueKey, parseErr)
-			} else {
-				task.DueDate = &t
-			}
-		}
-
-		if len(issue.Milestone) > 0 && issue.Milestone[0].Date != nil {
-			task.MilestoneID = fmt.Sprintf("%d", issue.Milestone[0].ID)
-			t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.Milestone[0].Date)
-			if parseErr != nil {
-				log.Printf("warn: failed to parse milestone date for %s: %v", issue.IssueKey, parseErr)
-			} else {
-				task.MilestoneDueDate = &t
-			}
-		}
-
-		tasks = append(tasks, task)
+		tasks = append(tasks, issueToTask(issue, space.ID))
 	}
 
 	return tasks, nil
+}
+
+// issueToTask は Backlog API のレスポンスを内部 Task モデルに変換する。
+func issueToTask(issue backlogIssue, spaceID uint) model.Task {
+	assigneeID := 0
+	if issue.Assignee != nil {
+		assigneeID = issue.Assignee.ID
+	}
+
+	parentID := 0
+	if issue.ParentIssueID != nil {
+		parentID = *issue.ParentIssueID
+	}
+
+	task := model.Task{
+		BacklogIssueID: issue.ID,
+		ParentIssueID:  parentID,
+		IssueKey:       issue.IssueKey,
+		Title:          issue.Summary,
+		Description:    issue.Description,
+		Priority:       mapPriority(issue.Priority.ID),
+		EstimatedHours: derefFloat(issue.EstimatedHours),
+		Status:         issue.Status.Name,
+		AssigneeID:     assigneeID,
+		SpaceID:        spaceID,
+		SyncedAt:       time.Now(),
+	}
+
+	if issue.Created != nil {
+		t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.Created)
+		if parseErr != nil {
+			log.Printf("warn: failed to parse created date for %s: %v", issue.IssueKey, parseErr)
+		} else {
+			task.BacklogCreatedAt = &t
+		}
+	}
+
+	if issue.DueDate != nil {
+		t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.DueDate)
+		if parseErr != nil {
+			log.Printf("warn: failed to parse dueDate for %s: %v", issue.IssueKey, parseErr)
+		} else {
+			task.DueDate = &t
+		}
+	}
+
+	if len(issue.Milestone) > 0 && issue.Milestone[0].Date != nil {
+		task.MilestoneID = fmt.Sprintf("%d", issue.Milestone[0].ID)
+		t, parseErr := time.Parse("2006-01-02T15:04:05Z", *issue.Milestone[0].Date)
+		if parseErr != nil {
+			log.Printf("warn: failed to parse milestone date for %s: %v", issue.IssueKey, parseErr)
+		} else {
+			task.MilestoneDueDate = &t
+		}
+	}
+
+	return task
 }
 
 type SyncResult struct {

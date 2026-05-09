@@ -144,6 +144,7 @@ func (s *Syncer) runSync() (int, []string) {
 				if err := tx.Clauses(clause.OnConflict{
 					Columns: []clause.Column{{Name: "issue_key"}},
 					DoUpdates: clause.AssignmentColumns([]string{
+						"backlog_issue_id", "parent_issue_id",
 						"title", "description", "priority", "estimated_hours",
 						"due_date", "status", "assignee_id", "score",
 						"milestone_id", "milestone_due_date", "backlog_created_at", "synced_at",

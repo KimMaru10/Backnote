@@ -6,6 +6,8 @@ const TaskStatusCompleted = "完了"
 
 type Task struct {
 	ID               uint       `gorm:"primaryKey" json:"id"`
+	BacklogIssueID   int        `gorm:"index;default:0" json:"backlogIssueId"`
+	ParentIssueID    int        `gorm:"index;default:0" json:"parentIssueId"`
 	IssueKey         string     `gorm:"uniqueIndex;not null" json:"issueKey"`
 	Title            string     `gorm:"not null" json:"title"`
 	Description      string     `json:"description"`
