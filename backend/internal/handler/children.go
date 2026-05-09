@@ -43,6 +43,9 @@ type relatedResponse struct {
 // GET /api/tasks/:id/related
 // 親課題と子課題をまとめて返す。
 // それぞれ Backnote DB に存在すれば LocalTaskID を含み、フロント側でアプリ内遷移できる。
+//
+// パフォーマンス上の注意: 関連課題の LocalTaskID 解決はかつて N+1 クエリだったが、
+// 親+兄弟+子をまとめて一度の SELECT で解決するように集約してある。
 func (h *ChildrenHandler) GetRelated(c echo.Context) error {
 	taskID := c.Param("id")
 
@@ -56,57 +59,112 @@ func (h *ChildrenHandler) GetRelated(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "space not found"})
 	}
 
+	// 1. Backlog API からの取得は LocalTaskID 付与なしで先に組み立てる
 	resp := relatedResponse{Parent: nil, Siblings: []relatedIssue{}, Children: []relatedIssue{}}
 
-	// 親課題と兄弟課題（自分が子の場合）
 	if task.ParentIssueID > 0 {
-		parent, err := h.fetchIssueByID(space, task.ParentIssueID)
-		if err != nil {
+		if parent, err := h.fetchIssueByID(space, task.ParentIssueID); err != nil {
 			log.Printf("warn: parent fetch failed: %v", err)
 		} else if parent != nil {
-			r := h.toRelated(*parent)
+			r := toRelated(*parent)
 			resp.Parent = &r
 		}
 
 		// 親の子 = 自分自身 + 兄弟。自分を除外して兄弟リストを作る。
-		siblings, err := h.fetchChildren(space, task.ParentIssueID)
-		if err != nil {
+		if siblings, err := h.fetchChildren(space, task.ParentIssueID); err != nil {
 			log.Printf("warn: siblings fetch failed: %v", err)
 		} else {
 			for _, s := range siblings {
 				if s.ID == task.BacklogIssueID {
 					continue
 				}
-				resp.Siblings = append(resp.Siblings, h.toRelated(s))
+				resp.Siblings = append(resp.Siblings, toRelated(s))
 			}
 		}
 	}
 
-	// 子課題
 	if task.BacklogIssueID > 0 {
-		children, err := h.fetchChildren(space, task.BacklogIssueID)
-		if err != nil {
+		if children, err := h.fetchChildren(space, task.BacklogIssueID); err != nil {
 			log.Printf("warn: children fetch failed: %v", err)
 		} else {
 			for _, ch := range children {
-				resp.Children = append(resp.Children, h.toRelated(ch))
+				resp.Children = append(resp.Children, toRelated(ch))
 			}
 		}
 	}
 
 	// 自分が親（子を持つトップレベル課題）の場合、自分自身を「親」として表示する。
-	// 詳細を見ている課題が親であることを視覚的にも明示するため。
 	if resp.Parent == nil && len(resp.Children) > 0 && task.BacklogIssueID > 0 {
-		self, err := h.fetchIssueByID(space, task.BacklogIssueID)
-		if err != nil {
+		if self, err := h.fetchIssueByID(space, task.BacklogIssueID); err != nil {
 			log.Printf("warn: self fetch failed: %v", err)
 		} else if self != nil {
-			r := h.toRelated(*self)
+			r := toRelated(*self)
 			resp.Parent = &r
 		}
 	}
 
+	// 2. 関連課題の LocalTaskID をまとめて 1 クエリで解決して付与
+	h.attachLocalTaskIDs(&resp)
+
 	return c.JSON(http.StatusOK, resp)
+}
+
+// attachLocalTaskIDs は parent / siblings / children に含まれる Backlog ID を
+// 1 度の SELECT で local task ID にマップして書き戻す。
+// 旧実装は関連課題ごとに DB クエリを発行していたが、N が大きい（兄弟数十件）と
+// 1 リクエストで N+1 回の SELECT が走り、画面遷移直後の負荷スパイクの一因となっていた。
+func (h *ChildrenHandler) attachLocalTaskIDs(resp *relatedResponse) {
+	ids := make([]int, 0, 1+len(resp.Siblings)+len(resp.Children))
+	if resp.Parent != nil && resp.Parent.BacklogID > 0 {
+		ids = append(ids, resp.Parent.BacklogID)
+	}
+	for _, s := range resp.Siblings {
+		if s.BacklogID > 0 {
+			ids = append(ids, s.BacklogID)
+		}
+	}
+	for _, c := range resp.Children {
+		if c.BacklogID > 0 {
+			ids = append(ids, c.BacklogID)
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+
+	type row struct {
+		ID             uint
+		BacklogIssueID int
+	}
+	var rows []row
+	if err := h.db.Model(&model.Task{}).
+		Select("id, backlog_issue_id").
+		Where("backlog_issue_id IN ?", ids).
+		Find(&rows).Error; err != nil {
+		log.Printf("warn: local task lookup failed: %v", err)
+		return
+	}
+
+	localByBacklog := make(map[int]uint, len(rows))
+	for _, r := range rows {
+		localByBacklog[r.BacklogIssueID] = r.ID
+	}
+
+	if resp.Parent != nil {
+		if id, ok := localByBacklog[resp.Parent.BacklogID]; ok {
+			resp.Parent.LocalTaskID = id
+		}
+	}
+	for i := range resp.Siblings {
+		if id, ok := localByBacklog[resp.Siblings[i].BacklogID]; ok {
+			resp.Siblings[i].LocalTaskID = id
+		}
+	}
+	for i := range resp.Children {
+		if id, ok := localByBacklog[resp.Children[i].BacklogID]; ok {
+			resp.Children[i].LocalTaskID = id
+		}
+	}
 }
 
 type backlogIssueLite struct {
@@ -164,8 +222,10 @@ func (h *ChildrenHandler) fetchIssueByID(space model.BacklogSpace, id int) (*bac
 	return &issue, nil
 }
 
-// Backlog レスポンスを front 用 DTO へ変換し、ローカル DB に同じ課題があれば LocalTaskID を付与
-func (h *ChildrenHandler) toRelated(b backlogIssueLite) relatedIssue {
+// Backlog レスポンスを front 用 DTO へ変換する。
+// LocalTaskID は呼び出し元の attachLocalTaskIDs でまとめて 1 クエリ解決するため、
+// ここでは 0 のまま返す。
+func toRelated(b backlogIssueLite) relatedIssue {
 	r := relatedIssue{
 		BacklogID: b.ID,
 		IssueKey:  b.IssueKey,
@@ -178,11 +238,6 @@ func (h *ChildrenHandler) toRelated(b backlogIssueLite) relatedIssue {
 	}
 	if b.DueDate != nil {
 		r.DueDate = *b.DueDate
-	}
-	// 同期済みなら LocalTaskID を付ける
-	var local model.Task
-	if err := h.db.Select("id").Where("backlog_issue_id = ?", b.ID).First(&local).Error; err == nil {
-		r.LocalTaskID = local.ID
 	}
 	return r
 }
