@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage } from 'electron'
 import { join } from 'path'
 import { BACKEND_PORT } from './backend'
+import { toggleTrayPopover } from './popover'
 
 const POLL_INTERVAL_MS = 30 * 1000
 
@@ -74,8 +75,11 @@ export function createTray(getMainWindow: () => BrowserWindow | null): Tray {
   ])
   tray.setContextMenu(contextMenu)
 
-  // クリックでウィンドウ表示
-  tray.on('click', () => showAndFocus())
+  // 左クリックでポップオーバー開閉。右クリック（コンテキスト）は標準メニュー。
+  tray.on('click', () => {
+    if (!tray) return
+    toggleTrayPopover(tray.getBounds())
+  })
 
   // 30 秒ごとに未読件数を更新（macOS のみバッジ表示）
   void updateBadge()

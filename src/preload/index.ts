@@ -11,6 +11,18 @@ const api = {
     return () => {
       ipcRenderer.removeListener('navigate', listener)
     }
+  },
+  // Tray ポップオーバーからメインウィンドウを前面化 + 該当パスへ遷移
+  openInMain: (path: string): void => {
+    ipcRenderer.send('open-in-main', path)
+  },
+  // Tray ポップオーバーから外部 URL を OS のブラウザで開く
+  openExternal: (url: string): void => {
+    ipcRenderer.send('open-external', url)
+  },
+  // Tray ポップオーバーを非表示にする
+  hideTrayPopover: (): void => {
+    ipcRenderer.send('hide-tray-popover')
   }
 }
 

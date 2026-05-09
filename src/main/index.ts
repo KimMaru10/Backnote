@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { startBackend, stopBackend, BACKEND_PORT } from './backend'
 import { createTray, stopTray } from './tray'
+import { destroyTrayPopover, hideTrayPopover } from './popover'
 import { startNotifier, stopNotifier } from './notifier'
 
 let mainWindow: BrowserWindow | null = null
@@ -54,6 +55,25 @@ ipcMain.on('get-backend-port', (event) => {
   event.returnValue = BACKEND_PORT
 })
 
+// Tray ポップオーバーからメインウィンドウを前面化 + 該当パスへ遷移
+ipcMain.on('open-in-main', (_event, path: string) => {
+  hideTrayPopover()
+  if (!mainWindow) return
+  if (!mainWindow.isVisible()) mainWindow.show()
+  mainWindow.focus()
+  mainWindow.webContents.send('navigate', path)
+})
+
+ipcMain.on('open-external', (_event, url: string) => {
+  if (typeof url === 'string' && url.startsWith('http')) {
+    void shell.openExternal(url)
+  }
+})
+
+ipcMain.on('hide-tray-popover', () => {
+  hideTrayPopover()
+})
+
 app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors,NetworkServiceInProcess2')
 app.commandLine.appendSwitch('enable-features', 'NetworkServiceInProcess')
 
@@ -80,6 +100,7 @@ app.whenReady().then(async () => {
 app.on('before-quit', () => {
   ;(app as unknown as { isQuiting: boolean }).isQuiting = true
   stopTray()
+  destroyTrayPopover()
   stopNotifier()
   stopBackend()
 })

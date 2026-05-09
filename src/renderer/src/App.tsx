@@ -8,6 +8,7 @@ import Guide from './pages/Guide'
 import FocusMode from './pages/FocusMode'
 import CommandPalette from './components/CommandPalette'
 import NotificationsPanel from './components/NotificationsPanel'
+import TrayPopoverApp from './components/TrayPopoverApp'
 import BackToTop from './components/BackToTop'
 import MiniTimer from './components/MiniTimer'
 import { FocusTimerProvider } from './hooks/useFocusTimer'
@@ -208,6 +209,14 @@ function AppLayout(): JSX.Element {
 
 function App(): JSX.Element {
   const [assigneeMode, setAssigneeMode] = useState<AssigneeMode>('mine')
+
+  // Tray からのポップオーバー用ウィンドウは index.html#/popover で起動される。
+  // メインアプリのレイアウトとは独立した最小 UI を返す。
+  const isPopover =
+    typeof window !== 'undefined' && window.location.hash.startsWith('#/popover')
+  if (isPopover) {
+    return <TrayPopoverApp />
+  }
 
   return (
     <AppContext.Provider value={{ assigneeMode, setAssigneeMode }}>
