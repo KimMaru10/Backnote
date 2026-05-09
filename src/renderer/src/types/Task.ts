@@ -11,6 +11,9 @@ export interface Task {
   spaceId: number
   milestoneId: string
   milestoneDueDate: string | null
+  backlogCreatedAt: string | null
+  createdUserName: string
+  createdUserIconUrl: string
 }
 
 export interface Space {

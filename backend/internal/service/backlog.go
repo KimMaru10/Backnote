@@ -57,6 +57,13 @@ type backlogIssue struct {
 		ID   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"assignee"`
+	CreatedUser *struct {
+		ID           int    `json:"id"`
+		Name         string `json:"name"`
+		NulabAccount *struct {
+			IconURL string `json:"iconUrl"`
+		} `json:"nulabAccount"`
+	} `json:"createdUser"`
 	ParentIssueID *int    `json:"parentIssueId"`
 	Description   string  `json:"description"`
 	Created       *string `json:"created"`
@@ -158,23 +165,33 @@ func issueToTask(issue backlogIssue, spaceID uint) model.Task {
 		assigneeID = issue.Assignee.ID
 	}
 
+	var createdUserName, createdUserIcon string
+	if issue.CreatedUser != nil {
+		createdUserName = issue.CreatedUser.Name
+		if issue.CreatedUser.NulabAccount != nil {
+			createdUserIcon = issue.CreatedUser.NulabAccount.IconURL
+		}
+	}
+
 	parentID := 0
 	if issue.ParentIssueID != nil {
 		parentID = *issue.ParentIssueID
 	}
 
 	task := model.Task{
-		BacklogIssueID: issue.ID,
-		ParentIssueID:  parentID,
-		IssueKey:       issue.IssueKey,
-		Title:          issue.Summary,
-		Description:    issue.Description,
-		Priority:       mapPriority(issue.Priority.ID),
-		EstimatedHours: derefFloat(issue.EstimatedHours),
-		Status:         issue.Status.Name,
-		AssigneeID:     assigneeID,
-		SpaceID:        spaceID,
-		SyncedAt:       time.Now(),
+		BacklogIssueID:     issue.ID,
+		ParentIssueID:      parentID,
+		IssueKey:           issue.IssueKey,
+		Title:              issue.Summary,
+		Description:        issue.Description,
+		Priority:           mapPriority(issue.Priority.ID),
+		EstimatedHours:     derefFloat(issue.EstimatedHours),
+		Status:             issue.Status.Name,
+		AssigneeID:         assigneeID,
+		CreatedUserName:    createdUserName,
+		CreatedUserIconURL: createdUserIcon,
+		SpaceID:            spaceID,
+		SyncedAt:           time.Now(),
 	}
 
 	if issue.Created != nil {

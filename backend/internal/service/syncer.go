@@ -148,6 +148,7 @@ func (s *Syncer) runSync() (int, []string) {
 						"title", "description", "priority", "estimated_hours",
 						"due_date", "status", "assignee_id", "score",
 						"milestone_id", "milestone_due_date", "backlog_created_at", "synced_at",
+						"created_user_name", "created_user_icon_url",
 					}),
 				}).Create(&result.Tasks).Error; err != nil {
 					return err

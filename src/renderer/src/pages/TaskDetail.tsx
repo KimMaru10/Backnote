@@ -4,27 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import type { Task, Memo, Space } from '../types/Task'
 import { getScoreLabel } from '../utils/scoreLabel'
 import BacklogComments from '../components/BacklogComments'
-
-function linkifyText(text: string): JSX.Element[] {
-  const urlPattern = /(https?:\/\/[^\s]+)/g
-  const parts = text.split(urlPattern)
-  return parts.map((part, i) => {
-    if (urlPattern.test(part)) {
-      return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:underline break-all"
-        >
-          {part}
-        </a>
-      )
-    }
-    return <span key={i}>{part}</span>
-  })
-}
+import BacklogContent from '../components/BacklogContent'
+import RelatedIssues from '../components/RelatedIssues'
 
 function TaskDetail(): JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -206,28 +187,108 @@ function TaskDetail(): JSX.Element {
         <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>
       )}
 
-      {/* メインコンテンツ: 2カラム */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 左: 課題情報 */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* タイトル */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h1 className="text-xl font-bold text-gray-800 mb-4">{task.title}</h1>
+      {/* メインコンテンツ: フル幅・縦並び */}
+      <div className="space-y-6">
+        {/* タイトル + プロパティ + 説明 を 1 つのカードに */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h1 className="text-xl font-bold text-gray-800 mb-4">{task.title}</h1>
 
-            {task.description && (
-              <div className="border-t pt-4">
-                <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">説明</h3>
-                <div className="text-sm text-gray-600 whitespace-pre-wrap break-words bg-gray-50 rounded-lg p-4 leading-relaxed">
-                  {linkifyText(task.description)}
+          {/* プロパティ（タイトルと説明の間、横並び） */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 py-4 border-t border-b border-gray-100">
+            <div>
+              <div className="text-xs text-gray-400 mb-1">ステータス</div>
+              <div className="text-sm font-medium text-gray-800">{task.status}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 mb-1">優先度</div>
+              <div className={`text-sm font-medium ${task.priority === '高' ? 'text-rose-600' : 'text-gray-800'}`}>
+                {task.priority}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 mb-1">期限</div>
+              <div className={`text-sm font-medium ${isOverdue ? 'text-red-500' : 'text-gray-800'}`}>
+                {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ja-JP') : '未設定'}
+                {isOverdue && <span className="ml-1 text-xs">(期限切れ)</span>}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-400 mb-1">緊急度</div>
+              {(() => {
+                const label = getScoreLabel(task.score)
+                return (
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${label.badgeClass}`}>
+                      {label.emoji} {label.text}
+                    </span>
+                    <span className="text-xs font-mono text-gray-400">({task.score.toFixed(2)})</span>
+                  </div>
+                )
+              })()}
+            </div>
+            {space && (
+              <div>
+                <div className="text-xs text-gray-400 mb-1">スペース</div>
+                <div className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: space.color }} />
+                  {space.displayName}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Backlog コメント */}
-          <BacklogComments taskId={task.id} />
+          {task.description && (
+            <div className="pt-4">
+              <div className="bg-white rounded-lg py-3">
+                {/* 登録者ヘッダー（ボックス内） */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex-shrink-0">
+                    {task.createdUserIconUrl ? (
+                      <img
+                        src={task.createdUserIconUrl}
+                        alt={task.createdUserName}
+                        className="w-9 h-9 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-emerald-100 text-brand flex items-center justify-center text-sm font-medium">
+                        {task.createdUserName ? task.createdUserName.slice(0, 1) : '?'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-800 truncate">
+                      {task.createdUserName || '不明'}
+                    </div>
+                    <div className="text-xs text-gray-400 flex items-center gap-2">
+                      <span>登録日</span>
+                      {task.backlogCreatedAt && (
+                        <span className="font-mono">
+                          {new Date(task.backlogCreatedAt).toLocaleString('ja-JP', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <BacklogContent text={task.description} taskId={task.id} />
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* メモ */}
+        {/* 親子課題 */}
+        <RelatedIssues taskId={task.id} spaceDomain={space?.domain ?? null} />
+
+        {/* Backlog コメント */}
+        <BacklogComments taskId={task.id} />
+
+        {/* メモ */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-4">
               メモ
@@ -282,61 +343,6 @@ function TaskDetail(): JSX.Element {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* 右: プロパティ */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-4">プロパティ</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">ステータス</span>
-                <span className="text-sm font-medium text-gray-800">{task.status}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">優先度</span>
-                <span className={`text-sm font-medium ${task.priority === '高' ? 'text-rose-600' : 'text-gray-800'}`}>
-                  {task.priority}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">期限</span>
-                <span className={`text-sm font-medium ${isOverdue ? 'text-red-500' : 'text-gray-800'}`}>
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ja-JP') : '未設定'}
-                  {isOverdue && ' (期限切れ)'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">見積もり</span>
-                <span className="text-sm font-medium text-gray-800">
-                  {task.estimatedHours > 0 ? `${task.estimatedHours}h` : '未設定'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">緊急度</span>
-                {(() => {
-                  const label = getScoreLabel(task.score)
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${label.badgeClass}`}>
-                        {label.emoji} {label.text}
-                      </span>
-                      <span className="text-xs font-mono text-gray-400">
-                        ({task.score.toFixed(2)})
-                      </span>
-                    </div>
-                  )
-                })()}
-              </div>
-              {space && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">スペース</span>
-                  <span className="text-sm font-medium text-gray-800">{space.displayName}</span>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
