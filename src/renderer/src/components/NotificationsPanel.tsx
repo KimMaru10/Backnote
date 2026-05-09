@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, Loader2, AlertCircle } from 'lucide-react'
+import { X, Loader2, AlertCircle, Bell } from 'lucide-react'
 
 interface BacklogNotification {
   id: number
@@ -26,24 +26,34 @@ interface NotificationsPanelProps {
   onUnreadCountChange?: (count: number) => void
 }
 
-function reasonClass(reason: string): string {
-  switch (reason) {
-    case 'コメント':
-      return 'text-emerald-600'
-    case '担当者':
-      return 'text-emerald-600'
-    case '更新':
-      return 'text-emerald-600'
-    case 'ファイル':
-      return 'text-blue-600'
+function statusBadgeClass(name: string): string {
+  switch (name) {
+    case '完了':
+      return 'bg-emerald-50 text-emerald-700'
+    case '処理中':
+      return 'bg-blue-50 text-blue-700'
+    case '処理済み':
+      return 'bg-purple-50 text-purple-700'
+    case '未対応':
+      return 'bg-gray-100 text-gray-600'
     default:
-      return 'text-gray-600'
+      return 'bg-amber-50 text-amber-700'
   }
 }
 
-function statusBadgeStyle(color: string): React.CSSProperties {
-  if (!color) return {}
-  return { backgroundColor: color, color: '#fff' }
+function buildSentence(reason: string): { prefix: string; verb: string; suffix: string } {
+  switch (reason) {
+    case '更新':
+      return { prefix: '課題を', verb: '更新', suffix: 'しました。' }
+    case 'コメント':
+      return { prefix: '', verb: 'コメント', suffix: 'しました。' }
+    case '担当者':
+      return { prefix: '', verb: '担当者', suffix: 'に設定しました。' }
+    case 'ファイル':
+      return { prefix: 'ファイルを', verb: '添付', suffix: 'しました。' }
+    default:
+      return { prefix: '', verb: reason, suffix: 'しました。' }
+  }
 }
 
 function formatRelative(iso: string): string {
@@ -74,14 +84,14 @@ function Avatar({ name, iconUrl }: { name: string; iconUrl?: string }): JSX.Elem
       <img
         src={iconUrl}
         alt={name}
-        className="w-10 h-10 rounded-full object-cover bg-gray-100"
+        className="w-9 h-9 rounded-full object-cover bg-gray-100 shrink-0"
         referrerPolicy="no-referrer"
       />
     )
   }
   const initial = name?.charAt(0) ?? '?'
   return (
-    <div className="w-10 h-10 rounded-full bg-orange-400 text-white flex items-center justify-center font-semibold text-sm">
+    <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-medium text-sm shrink-0">
       {initial}
     </div>
   )
@@ -97,7 +107,6 @@ export default function NotificationsPanel({
   const [items, setItems] = useState<BacklogNotification[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [senderFilter, setSenderFilter] = useState<string>('')
   const [onlyUnread, setOnlyUnread] = useState(false)
 
   useEffect(() => {
@@ -129,25 +138,11 @@ export default function NotificationsPanel({
     }
   }, [open, backendUrl, onUnreadCountChange])
 
-  // ユーザー絞り込み候補
-  const senderOptions = useMemo(() => {
-    const seen = new Set<string>()
-    const out: { id: number; name: string }[] = []
-    for (const n of items) {
-      if (!n.sender || !n.sender.name || seen.has(n.sender.name)) continue
-      seen.add(n.sender.name)
-      out.push({ id: n.sender.id, name: n.sender.name })
-    }
-    return out
-  }, [items])
-
-  const filtered = useMemo(() => {
-    return items.filter((n) => {
-      if (onlyUnread && n.alreadyRead) return false
-      if (senderFilter && n.sender?.name !== senderFilter) return false
-      return true
-    })
-  }, [items, onlyUnread, senderFilter])
+  const unreadCount = useMemo(() => items.filter((n) => !n.alreadyRead).length, [items])
+  const filtered = useMemo(
+    () => (onlyUnread ? items.filter((n) => !n.alreadyRead) : items),
+    [items, onlyUnread]
+  )
 
   const markRead = async (n: BacklogNotification): Promise<void> => {
     if (n.alreadyRead) return
@@ -179,25 +174,18 @@ export default function NotificationsPanel({
 
   return (
     <>
-      {/* クリックで閉じる薄い backdrop */}
+      {/* 背景クリックで閉じる薄いオーバーレイ */}
       <div className="fixed inset-0 z-40 bg-black/10" onClick={onClose} />
-      <aside className="fixed right-0 top-0 z-50 h-full w-[420px] max-w-[95vw] bg-white shadow-2xl flex flex-col">
+      <aside className="fixed right-0 top-0 z-50 h-full w-[420px] max-w-[95vw] bg-white shadow-2xl border-l border-gray-200 flex flex-col">
         {/* ヘッダー */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-emerald-500 text-white">
-          <h2 className="text-base font-semibold mr-2">お知らせ</h2>
-          <select
-            value={senderFilter}
-            onChange={(e) => setSenderFilter(e.target.value)}
-            className="flex-1 bg-white text-gray-700 text-sm rounded-md px-2 py-1.5 outline-none"
-          >
-            <option value="">ユーザーで絞り込み</option>
-            {senderOptions.map((s) => (
-              <option key={s.id} value={s.name}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-1.5 text-sm cursor-pointer select-none">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200">
+          <Bell size={16} className="text-gray-500" />
+          <h2 className="text-base font-semibold text-gray-800">お知らせ</h2>
+          {unreadCount > 0 && (
+            <span className="text-xs font-normal text-gray-400">{unreadCount} 件未読</span>
+          )}
+          <div className="flex-1" />
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={onlyUnread}
@@ -208,15 +196,15 @@ export default function NotificationsPanel({
           </label>
           <button
             onClick={onClose}
-            className="ml-1 p-1 rounded-md hover:bg-emerald-600/40 transition-colors"
+            className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
             aria-label="閉じる"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* 本体 */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
+        <div className="flex-1 overflow-y-auto">
           {loading && (
             <div className="flex items-center justify-center py-10 text-gray-400 gap-2 text-sm">
               <Loader2 size={16} className="animate-spin" />
@@ -232,64 +220,69 @@ export default function NotificationsPanel({
           )}
 
           {!loading && !error && filtered.length === 0 && (
-            <div className="text-center py-10 text-gray-400 text-sm">お知らせはありません</div>
+            <div className="text-center py-10 text-sm text-gray-400">お知らせはありません</div>
           )}
 
           {!loading && !error && filtered.length > 0 && (
-            <ul className="divide-y divide-gray-200">
-              {filtered.map((n) => (
-                <li
-                  key={`${n.spaceId}-${n.id}`}
-                  onClick={() => handleClick(n)}
-                  className={`px-4 py-3 cursor-pointer hover:bg-white transition-colors ${
-                    n.alreadyRead ? 'bg-gray-50' : 'bg-white'
-                  }`}
-                >
-                  <div className="flex gap-3">
-                    <Avatar name={n.sender?.name ?? '?'} iconUrl={n.sender?.iconUrl} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="text-[13px] text-gray-800">
-                          <span className="font-semibold">{n.sender?.name ?? '不明'}</span>
-                          <span className="mx-1">さんが</span>
-                          {n.reasonText === '担当者' || n.reasonText === '更新' || n.reasonText === 'コメント' ? (
-                            <>
-                              <span className={`font-medium ${reasonClass(n.reasonText)}`}>
-                                {n.reasonText}
-                              </span>
-                              <span className="ml-1">
-                                {n.reasonText === '担当者' ? 'に設定しました。' : 'しました。'}
-                              </span>
-                            </>
-                          ) : (
-                            <span className={`font-medium ${reasonClass(n.reasonText)}`}>
-                              {n.reasonText}
+            <ul className="divide-y divide-gray-100">
+              {filtered.map((n) => {
+                const sentence = buildSentence(n.reasonText)
+                return (
+                  <li
+                    key={`${n.spaceId}-${n.id}`}
+                    onClick={() => handleClick(n)}
+                    className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
+                      n.alreadyRead ? '' : 'bg-emerald-50/40'
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <Avatar name={n.sender?.name ?? '?'} iconUrl={n.sender?.iconUrl} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-[13px] text-gray-700 leading-snug">
+                            <span className="font-semibold text-gray-800">
+                              {n.sender?.name ?? '不明'}
                             </span>
-                          )}
+                            <span className="text-gray-500"> さんが </span>
+                            {sentence.prefix && (
+                              <span className="text-gray-500">{sentence.prefix} </span>
+                            )}
+                            <span className="font-medium text-emerald-600">{sentence.verb}</span>
+                            <span className="text-gray-500"> {sentence.suffix}</span>
+                          </div>
+                          <span className="text-[11px] text-gray-400 shrink-0 mt-0.5">
+                            {formatRelative(n.createdAt)}
+                          </span>
                         </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className="text-[11px] text-gray-400">{formatRelative(n.createdAt)}</span>
+
+                        {n.excerpt && (
+                          <div className="mt-1 text-[13px] text-gray-700 break-words leading-snug">
+                            「{truncate(n.excerpt, 90)}」
+                          </div>
+                        )}
+
+                        <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-[11px] text-gray-400 shrink-0">
+                            {n.issueKey}
+                          </span>
+                          <span className="text-[11px] text-gray-500 truncate">
+                            {truncate(n.issueTitle, 40)}
+                          </span>
                           {n.issueStatus && (
                             <span
-                              className="text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap"
-                              style={statusBadgeStyle(n.statusColor)}
+                              className={`ml-auto text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${statusBadgeClass(
+                                n.issueStatus
+                              )}`}
                             >
                               {n.issueStatus}
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="mt-1 text-[13px] text-gray-700 break-words">
-                        「{truncate(n.excerpt, 90)}」
-                      </div>
-                      <div className="mt-1 text-[11px] text-gray-500 truncate">
-                        <span className="font-mono">{n.issueKey}</span>
-                        {n.issueTitle && <span className="ml-1">{truncate(n.issueTitle, 40)}</span>}
-                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>

@@ -42,15 +42,16 @@ async function updateBadge(): Promise<void> {
 export function createTray(getMainWindow: () => BrowserWindow | null): Tray {
   getMainWindowFn = getMainWindow
 
-  const iconPath = join(__dirname, '../../resources/icon.png')
+  // resources/trayTemplate.png は黒シルエット + 透明背景のテンプレート画像。
+  // 同ディレクトリの trayTemplate@2x.png (32x32) が Retina で自動選択される。
+  const iconPath = join(__dirname, '../../resources/trayTemplate.png')
   let image = nativeImage.createFromPath(iconPath)
   if (image.isEmpty()) {
     // アイコンが見つからない環境でも tray を作れるようフォールバック
     image = nativeImage.createEmpty()
   }
-  // macOS のメニューバーは小さい白黒推奨。templateImage 化で自動対応。
+  // macOS のメニューバーは白黒推奨。テンプレート画像化で light/dark 自動対応。
   if (process.platform === 'darwin') {
-    image = image.resize({ width: 18, height: 18 })
     image.setTemplateImage(true)
   }
 
