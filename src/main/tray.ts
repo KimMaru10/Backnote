@@ -3,7 +3,9 @@ import { join } from 'path'
 import { BACKEND_PORT } from './backend'
 import { toggleTrayPopover } from './popover'
 
-const POLL_INTERVAL_MS = 30 * 1000
+// バッジ更新は Backlog API への負荷を抑えるため 2 分間隔。
+// 同タイミングで notifier.ts の Backlog 通知ポーリングも走るので、ユーザー体感も揃う。
+const POLL_INTERVAL_MS = 2 * 60 * 1000
 
 let tray: Tray | null = null
 let pollTimer: NodeJS.Timeout | null = null
