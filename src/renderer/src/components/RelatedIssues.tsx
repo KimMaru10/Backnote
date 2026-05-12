@@ -4,7 +4,7 @@ import { GitBranch, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
 
 // 兄弟・子セクションを初期表示で省略する閾値。これ以下なら全件表示、
 // これより多ければ最初の数件のみ表示して「もっと見る」で展開できる。
-const COLLAPSE_THRESHOLD = 5
+const COLLAPSE_THRESHOLD = 3
 
 interface RelatedIssue {
   backlogId: number
