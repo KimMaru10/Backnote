@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GitBranch, AlertCircle } from 'lucide-react'
+import { GitBranch, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
+
+// 兄弟・子セクションを初期表示で省略する閾値。これ以下なら全件表示、
+// これより多ければ最初の数件のみ表示して「もっと見る」で展開できる。
+const COLLAPSE_THRESHOLD = 5
 
 interface RelatedIssue {
   backlogId: number
@@ -63,6 +67,8 @@ export default function RelatedIssues({ taskId, spaceDomain }: RelatedIssuesProp
   const [data, setData] = useState<RelatedResponse>({ parent: null, siblings: [], children: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [siblingsExpanded, setSiblingsExpanded] = useState(false)
+  const [childrenExpanded, setChildrenExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -169,8 +175,56 @@ export default function RelatedIssues({ taskId, spaceDomain }: RelatedIssuesProp
             </thead>
             <tbody>
               {data.parent && renderRow(data.parent, '親')}
-              {data.siblings.map((s) => renderRow(s, '兄弟'))}
-              {data.children.map((c) => renderRow(c, '子'))}
+              {(siblingsExpanded ? data.siblings : data.siblings.slice(0, COLLAPSE_THRESHOLD)).map(
+                (s) => renderRow(s, '兄弟')
+              )}
+              {data.siblings.length > COLLAPSE_THRESHOLD && (
+                <tr>
+                  <td colSpan={5} className="py-2 pr-3">
+                    <button
+                      onClick={() => setSiblingsExpanded((v) => !v)}
+                      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-brand"
+                    >
+                      {siblingsExpanded ? (
+                        <>
+                          <ChevronUp size={12} />
+                          兄弟を折りたたむ
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={12} />
+                          残り {data.siblings.length - COLLAPSE_THRESHOLD} 件の兄弟を表示
+                        </>
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              )}
+              {(childrenExpanded ? data.children : data.children.slice(0, COLLAPSE_THRESHOLD)).map(
+                (c) => renderRow(c, '子')
+              )}
+              {data.children.length > COLLAPSE_THRESHOLD && (
+                <tr>
+                  <td colSpan={5} className="py-2 pr-3">
+                    <button
+                      onClick={() => setChildrenExpanded((v) => !v)}
+                      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-brand"
+                    >
+                      {childrenExpanded ? (
+                        <>
+                          <ChevronUp size={12} />
+                          子を折りたたむ
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={12} />
+                          残り {data.children.length - COLLAPSE_THRESHOLD} 件の子を表示
+                        </>
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
