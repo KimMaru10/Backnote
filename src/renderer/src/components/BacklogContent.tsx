@@ -90,10 +90,14 @@ function convertBacklogTables(text: string): string {
 }
 
 // Backlog記法 を Markdown に近い形に変換する。
-// Markdown と衝突しない記法のみ変換する（`* heading` は Markdown の箇条書きと衝突するため除外）。
+// 見出し（行頭 `*` `**` `***`）は Markdown の `#` `##` `###` に変換する。
+// Backlog のリスト記法は `-` / `+` で `*` は使わないため、`*` を `#` に置換しても衝突しない。
 function backlogToMarkdown(text: string, taskId?: number): string {
   let result = text
     .replace(/&br;/g, '\n')
+    .replace(/^(\*{1,3})\s+(.+)$/gm, (_, marks: string, body: string) =>
+      `${'#'.repeat(marks.length)} ${body}`
+    )
     .replace(/''(.+?)''/g, '**$1**')
     .replace(/%%(.+?)%%/g, '~~$1~~')
     .replace(/\[\[([^\]]+?)[>:]([^\]]+?)\]\]/g, '[$1]($2)')
@@ -190,8 +194,8 @@ export default function BacklogContent({ text, taskId }: BacklogContentProps): J
         '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ul]:space-y-1',
         '[&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_ol]:space-y-1',
         '[&_li]:leading-relaxed',
-        '[&_h1]:text-base [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-gray-900',
-        '[&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-2 [&_h2]:text-gray-900',
+        '[&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:pb-1 [&_h1]:border-b-2 [&_h1]:border-gray-300 [&_h1]:text-gray-900',
+        '[&_h2]:text-base [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:pb-1 [&_h2]:border-b [&_h2]:border-gray-200 [&_h2]:text-gray-900',
         '[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-gray-800',
         '[&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-3 [&_blockquote]:my-2 [&_blockquote]:text-gray-600 [&_blockquote]:italic',
         // インラインコード（バッククォート由来）
