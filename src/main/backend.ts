@@ -64,12 +64,17 @@ export async function startBackend(port: number = BACKEND_PORT): Promise<void> {
   }
 
   return new Promise((resolve, reject) => {
+    // 開発時は親 (npm run dev のターミナル) に直接流し、本番では完全に捨てる。
+    // 'pipe' にして Electron 側で読み出さないと OS パイプバッファ (macOS 64KB) が
+    // 満杯になり backend の write() が永久ブロック → HTTP ハンドラごとハングするため
+    // 'pipe' は使わない。'inherit' は親の fd を共有するだけなのでバッファ詰まりは起きない。
+    const childStdio: 'inherit' | 'ignore' = app.isPackaged ? 'ignore' : 'inherit'
     backendProcess = spawn(backendPath, [], {
       env: {
         ...process.env,
         BACKNOTE_PORT: String(port)
       },
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', childStdio, childStdio]
     })
 
     backendProcess.on('error', (err) => {
