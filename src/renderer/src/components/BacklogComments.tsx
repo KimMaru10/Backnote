@@ -76,8 +76,6 @@ const FIELD_LABEL: Record<string, string> = {
   parentIssue: '親課題'
 }
 
-// 内容（説明）のように長文になりやすいフィールドだけ、折りたたみ + 旧/新を別行で表示する。
-// それ以外（ステータス・期限など短い値）は従来通り「旧 → 新」のインライン表記にする。
 const LONG_TEXT_FIELDS = new Set(['description'])
 
 function formatInlineChangeLog(log: BacklogChangeLog, label: string): string {
@@ -87,9 +85,6 @@ function formatInlineChangeLog(log: BacklogChangeLog, label: string): string {
   return `${label}が変更されました`
 }
 
-// Backlog の説明欄は `\r\n` や `&br;` の多用で空行が大量に入りやすい。
-// whitespace-pre-wrap でそのまま描画すると差分表示が縦に間延びするため、
-// 改行コードを `\n` に揃え、3 連以上の改行は空行 1 行（`\n\n`）まで圧縮する。
 function normalizeLineBreaks(text: string): string {
   return text
     .replace(/&br;/g, '\n')
@@ -100,9 +95,6 @@ function normalizeLineBreaks(text: string): string {
 function LongTextChangeLog({ log, label }: { log: BacklogChangeLog; label: string }): JSX.Element {
   const original = normalizeLineBreaks(log.originalValue ?? '')
   const next = normalizeLineBreaks(log.newValue ?? '')
-  // 単語＋空白単位で差分を取り、変更箇所だけ背景色でハイライトする。
-  // diffWordsWithSpace はトークン分割時に空白を保持するため、URL や日本語混在文でも
-  // インライン表示が崩れにくい。
   const parts = diffWordsWithSpace(original, next)
   return (
     <details className="group">

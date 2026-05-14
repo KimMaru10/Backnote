@@ -90,8 +90,6 @@ function convertBacklogTables(text: string): string {
 }
 
 // Backlog記法 を Markdown に近い形に変換する。
-// 見出し（行頭 `*` `**` `***`）は Markdown の `#` `##` `###` に変換する。
-// Backlog のリスト記法は `-` / `+` で `*` は使わないため、`*` を `#` に置換しても衝突しない。
 function backlogToMarkdown(text: string, taskId?: number): string {
   let result = text
     .replace(/&br;/g, '\n')

@@ -100,8 +100,6 @@ export default function RelatedIssues({ taskId, spaceDomain }: RelatedIssuesProp
     }
   }, [taskId, backendUrl])
 
-  // ロード中は、データ取得完了後と同じレイアウト幅のスケルトンを出して
-  // 「あとからカードが飛び込んでくる」レイアウトシフトを防ぐ。
   if (loading) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
