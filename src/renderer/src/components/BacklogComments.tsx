@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MessageCircle, AlertCircle, ArrowDownNarrowWide, ArrowUpNarrowWide } from 'lucide-react'
+import {
+  MessageCircle,
+  AlertCircle,
+  ArrowDownNarrowWide,
+  ArrowUpNarrowWide,
+  ChevronRight
+} from 'lucide-react'
+import { diffWordsWithSpace } from 'diff'
 import BacklogContent from './BacklogContent'
 
 interface BacklogCommentUser {
@@ -69,12 +76,87 @@ const FIELD_LABEL: Record<string, string> = {
   parentIssue: '親課題'
 }
 
-function formatChangeLog(log: BacklogChangeLog): string {
-  const label = FIELD_LABEL[log.field] ?? log.field
+// 内容（説明）のように長文になりやすいフィールドだけ、折りたたみ + 旧/新を別行で表示する。
+// それ以外（ステータス・期限など短い値）は従来通り「旧 → 新」のインライン表記にする。
+const LONG_TEXT_FIELDS = new Set(['description'])
+
+function formatInlineChangeLog(log: BacklogChangeLog, label: string): string {
   if (log.originalValue && log.newValue) return `${label}: ${log.originalValue} → ${log.newValue}`
   if (log.newValue) return `${label}: ${log.newValue}`
   if (log.originalValue) return `${label}: ${log.originalValue} を削除`
   return `${label}が変更されました`
+}
+
+// Backlog の説明欄は `\r\n` や `&br;` の多用で空行が大量に入りやすい。
+// whitespace-pre-wrap でそのまま描画すると差分表示が縦に間延びするため、
+// 改行コードを `\n` に揃え、3 連以上の改行は空行 1 行（`\n\n`）まで圧縮する。
+function normalizeLineBreaks(text: string): string {
+  return text
+    .replace(/&br;/g, '\n')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+}
+
+function LongTextChangeLog({ log, label }: { log: BacklogChangeLog; label: string }): JSX.Element {
+  const original = normalizeLineBreaks(log.originalValue ?? '')
+  const next = normalizeLineBreaks(log.newValue ?? '')
+  // 単語＋空白単位で差分を取り、変更箇所だけ背景色でハイライトする。
+  // diffWordsWithSpace はトークン分割時に空白を保持するため、URL や日本語混在文でも
+  // インライン表示が崩れにくい。
+  const parts = diffWordsWithSpace(original, next)
+  return (
+    <details className="group">
+      <summary className="flex items-center gap-1 cursor-pointer text-gray-600 hover:text-gray-800 select-none list-none [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          size={12}
+          className="transition-transform group-open:rotate-90 flex-shrink-0"
+        />
+        <span>{label}: 変更内容...</span>
+      </summary>
+      <div className="mt-2 pl-4 whitespace-pre-wrap break-all leading-6 text-gray-800">
+        {parts.map((p, i) => {
+          if (p.added) {
+            return (
+              <span key={i} className="bg-green-100 text-green-900 underline rounded px-0.5">
+                {p.value}
+              </span>
+            )
+          }
+          if (p.removed) {
+            return (
+              <span key={i} className="bg-red-100 text-red-900 line-through rounded px-0.5">
+                {p.value}
+              </span>
+            )
+          }
+          return <span key={i}>{p.value}</span>
+        })}
+      </div>
+    </details>
+  )
+}
+
+function ChangeLogList({ logs }: { logs: BacklogChangeLog[] }): JSX.Element {
+  return (
+    <div className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg space-y-1">
+      {logs.map((log, idx) => {
+        const label = FIELD_LABEL[log.field] ?? log.field
+        const isLongText = LONG_TEXT_FIELDS.has(log.field)
+        return (
+          <div key={idx} className="flex items-start gap-2">
+            <span className="inline-block w-1.5 h-1.5 mt-1.5 rounded-full border border-gray-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              {isLongText ? (
+                <LongTextChangeLog log={log} label={label} />
+              ) : (
+                <span>{formatInlineChangeLog(log, label)}</span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 type SortOrder = 'desc' | 'asc'
@@ -189,24 +271,12 @@ export default function BacklogComments({ taskId }: BacklogCommentsProps): JSX.E
 
                 {/* 本文 */}
                 {isSystem ? (
-                  <div className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg space-y-1">
-                    {c.changeLog?.map((log, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="inline-block w-1.5 h-1.5 rounded-full border border-gray-400 flex-shrink-0" />
-                        <span className="flex-1">{formatChangeLog(log)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <ChangeLogList logs={c.changeLog ?? []} />
                 ) : (
                   <>
                     {c.changeLog && c.changeLog.length > 0 && (
-                      <div className="mb-2 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg space-y-1">
-                        {c.changeLog.map((log, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full border border-gray-400 flex-shrink-0" />
-                            <span className="flex-1">{formatChangeLog(log)}</span>
-                          </div>
-                        ))}
+                      <div className="mb-2">
+                        <ChangeLogList logs={c.changeLog} />
                       </div>
                     )}
                     {c.content && <BacklogContent text={c.content} taskId={taskId} />}
