@@ -100,7 +100,24 @@ export default function RelatedIssues({ taskId, spaceDomain }: RelatedIssuesProp
     }
   }, [taskId, backendUrl])
 
-  if (loading) return null
+  // ロード中は、データ取得完了後と同じレイアウト幅のスケルトンを出して
+  // 「あとからカードが飛び込んでくる」レイアウトシフトを防ぐ。
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <GitBranch size={16} />
+          関連課題
+        </h3>
+        <div className="animate-pulse space-y-3">
+          <div className="h-3 bg-gray-100 rounded w-full" />
+          <div className="h-3 bg-gray-100 rounded w-11/12" />
+          <div className="h-3 bg-gray-100 rounded w-10/12" />
+        </div>
+      </div>
+    )
+  }
+
   const total = (data.parent ? 1 : 0) + data.siblings.length + data.children.length
   if (total === 0 && !error) return null
 
