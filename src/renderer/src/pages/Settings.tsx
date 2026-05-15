@@ -192,10 +192,11 @@ function Settings(): JSX.Element {
     setTestResult(null)
     setLoading(true)
     try {
+      const normalizedDomain = extractBacklogDomain(form.domain) ?? form.domain.trim()
       const res = await fetch(`${backendUrl}/api/spaces/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: form.domain, apiKey: form.apiKeyRef })
+        body: JSON.stringify({ domain: normalizedDomain, apiKey: form.apiKeyRef })
       })
       const data = await res.json()
       setTestResult(data.success ? 'success' : (data.error || '不明なエラー'))
@@ -214,10 +215,11 @@ function Settings(): JSX.Element {
         : `${backendUrl}/api/spaces`
       const method = editingId ? 'PUT' : 'POST'
 
+      const normalizedDomain = extractBacklogDomain(form.domain) ?? form.domain.trim()
       await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, domain: normalizedDomain })
       })
 
       setForm(emptyForm)

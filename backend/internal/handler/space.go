@@ -173,7 +173,13 @@ func (h *SpaceHandler) Update(c echo.Context) error {
 	}
 
 	if req.Domain != "" {
-		space.Domain = req.Domain
+		domain, err := extractBacklogDomain(req.Domain)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": err.Error(),
+			})
+		}
+		space.Domain = domain
 	}
 	if req.ApiKeyRef != "" {
 		space.ApiKeyRef = req.ApiKeyRef
@@ -264,8 +270,16 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 		})
 	}
 
+	domain, err := extractBacklogDomain(req.Domain)
+	if err != nil {
+		return c.JSON(http.StatusOK, testConnectionResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
 	ctx := c.Request().Context()
-	url := fmt.Sprintf("https://%s/api/v2/space?apiKey=%s", req.Domain, req.ApiKey)
+	url := fmt.Sprintf("https://%s/api/v2/space?apiKey=%s", domain, req.ApiKey)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -280,7 +294,7 @@ func (h *SpaceHandler) TestConnection(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusOK, testConnectionResponse{
 			Success: false,
-			Error:   fmt.Sprintf("接続に失敗しました: %s", req.Domain),
+			Error:   fmt.Sprintf("接続に失敗しました: %s", domain),
 		})
 	}
 	defer resp.Body.Close()
