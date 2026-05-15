@@ -31,6 +31,7 @@ import GanttChart from '../components/GanttChart'
 import CalendarView from '../components/CalendarView'
 import DailyFocus from '../components/DailyFocus'
 import { useFocus } from '../hooks/useFocus'
+import { useSessionState } from '../hooks/useSessionState'
 import loadingAnimation from '../assets/loading-animation.json'
 
 type ViewMode = 'list' | 'gantt' | 'calendar'
@@ -45,7 +46,7 @@ function Dashboard(): JSX.Element {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode] = useSessionState<ViewMode>('dashboard:viewMode', 'list')
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right')
   const [slideKey, setSlideKey] = useState(0)
 

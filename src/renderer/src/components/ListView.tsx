@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import type { Task, Space } from '../types/Task'
 import StickyCard from './StickyCard'
+import { useSessionState } from '../hooks/useSessionState'
 
 type TabRange = 'all' | 'overdue' | 'today' | 'week' | 'future' | 'undated'
 
@@ -66,11 +67,11 @@ function getProjectKey(issueKey: string): string {
 }
 
 export default function ListView({ tasks, spaces, focusedTaskIds, onTogglePin }: ListViewProps): JSX.Element {
-  const [activeTab, setActiveTab] = useState<TabRange>('all')
+  const [activeTab, setActiveTab] = useSessionState<TabRange>('listview:activeTab', 'all')
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right')
   const [slideKey, setSlideKey] = useState(0)
-  const [selectedSpaceId, setSelectedSpaceId] = useState<number | null>(null)
-  const [selectedProject, setSelectedProject] = useState<string | null>(null)
+  const [selectedSpaceId, setSelectedSpaceId] = useSessionState<number | null>('listview:spaceId', null)
+  const [selectedProject, setSelectedProject] = useSessionState<string | null>('listview:project', null)
 
   const TAB_ORDER: TabRange[] = ['all', 'overdue', 'today', 'week', 'future', 'undated']
 
