@@ -79,62 +79,63 @@ app.commandLine.appendSwitch('enable-features', 'NetworkServiceInProcess')
 
 // シングルインスタンスロック。Tray 常駐型なので、ウィンドウを × で閉じた後に
 // アプリアイコンを再クリックされても 2 つ目の Electron を起動しない。
-// 起動してしまうとバックエンドが port 衝突で死ぬ。
-const gotTheLock = app.requestSingleInstanceLock()
-if (!gotTheLock) {
-  app.quit()
+// 重要: app.quit() は非同期なので、ロック取得失敗時もこの関数の続きと whenReady が走る。
+// startBackend を呼ぶと killOrphanBackends が既存セッションのバックエンドを kill してしまうので、
+// 2 つ目のインスタンスは whenReady より早く、ロックも取らずに即座に exit する。
+if (!app.requestSingleInstanceLock()) {
+  app.exit(0)
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) mainWindow.show()
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+  })
+
+  app.whenReady().then(async () => {
+    try {
+      await startBackend()
+    } catch (err) {
+      dialog.showErrorBox(
+        'Backnote 起動エラー',
+        `起動に失敗しました。アプリを再起動してください。\n${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+
+    createWindow()
+    createTray(getMainWindow)
+    startNotifier(getMainWindow)
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      else mainWindow?.show()
+    })
+  })
+
+  let isQuittingInProgress = false
+
+  app.on('before-quit', (event) => {
+    ;(app as unknown as { isQuiting: boolean }).isQuiting = true
+    if (isQuittingInProgress) return
+    isQuittingInProgress = true
+
+    stopTray()
+    destroyTrayPopover()
+    stopNotifier()
+
+    // stopBackend の HTTP graceful shutdown 完了を待ってから app.quit() する。
+    // これを待たないと requestShutdown が in-flight のままプロセスが落ち、
+    // バックエンドの DB/Syncer クリーンアップが走らない。
+    event.preventDefault()
+    void stopBackend().finally(() => {
+      app.quit()
+    })
+  })
+
+  // Tray 常駐するため window-all-closed では quit しない。
+  // （macOS は元々この挙動だが、Windows/Linux でも同じにする）
+  app.on('window-all-closed', () => {
+    // 何もしない: Tray から再表示するため
+  })
 }
-
-app.on('second-instance', () => {
-  if (mainWindow) {
-    if (!mainWindow.isVisible()) mainWindow.show()
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.focus()
-  }
-})
-
-app.whenReady().then(async () => {
-  try {
-    await startBackend()
-  } catch (err) {
-    dialog.showErrorBox(
-      'Backnote 起動エラー',
-      `起動に失敗しました。アプリを再起動してください。\n${err instanceof Error ? err.message : String(err)}`
-    )
-  }
-
-  createWindow()
-  createTray(getMainWindow)
-  startNotifier(getMainWindow)
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-    else mainWindow?.show()
-  })
-})
-
-let isQuittingInProgress = false
-
-app.on('before-quit', (event) => {
-  ;(app as unknown as { isQuiting: boolean }).isQuiting = true
-  if (isQuittingInProgress) return
-  isQuittingInProgress = true
-
-  stopTray()
-  destroyTrayPopover()
-  stopNotifier()
-
-  // stopBackend の HTTP graceful shutdown 完了を待ってから app.quit() する。
-  // これを待たないと requestShutdown が in-flight のままプロセスが落ち、
-  // バックエンドの DB/Syncer クリーンアップが走らない。
-  event.preventDefault()
-  void stopBackend().finally(() => {
-    app.quit()
-  })
-})
-
-// Tray 常駐するため window-all-closed では quit しない。
-// （macOS は元々この挙動だが、Windows/Linux でも同じにする）
-app.on('window-all-closed', () => {
-  // 何もしない: Tray から再表示するため
-})
