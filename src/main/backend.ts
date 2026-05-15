@@ -14,10 +14,11 @@ export const BACKEND_PORT = 8080
 let backendProcess: ChildProcess | null = null
 
 function getBackendPath(): string {
+  const binaryName = process.platform === 'win32' ? 'backnote-backend.exe' : 'backnote-backend'
   if (app.isPackaged) {
-    return join(process.resourcesPath, 'backend', 'backnote-backend')
+    return join(process.resourcesPath, 'backend', binaryName)
   }
-  return join(app.getAppPath(), 'backend', 'bin', 'backnote-backend')
+  return join(app.getAppPath(), 'backend', 'bin', binaryName)
 }
 
 function waitForHealth(port: number): Promise<void> {
