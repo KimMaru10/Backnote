@@ -77,6 +77,22 @@ ipcMain.on('hide-tray-popover', () => {
 app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors,NetworkServiceInProcess2')
 app.commandLine.appendSwitch('enable-features', 'NetworkServiceInProcess')
 
+// シングルインスタンスロック。Tray 常駐型なので、ウィンドウを × で閉じた後に
+// アプリアイコンを再クリックされても 2 つ目の Electron を起動しない。
+// 起動してしまうとバックエンドが port 衝突で死ぬ。
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+}
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (!mainWindow.isVisible()) mainWindow.show()
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  }
+})
+
 app.whenReady().then(async () => {
   try {
     await startBackend()

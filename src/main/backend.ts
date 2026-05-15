@@ -1,5 +1,6 @@
-import { ChildProcess, spawn } from 'child_process'
+import { ChildProcess, exec, spawn } from 'child_process'
 import { randomBytes } from 'crypto'
+import { promisify } from 'util'
 import { app, dialog } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
@@ -68,6 +69,22 @@ function waitForHealth(port: number): Promise<void> {
   })
 }
 
+const execAsync = promisify(exec)
+
+// 前回セッションのバックエンドが孤児として残っている場合に kill する。
+// 通常は before-quit → stopBackend で死ぬが、Electron がクラッシュ or 強制終了されたケースの保険。
+async function killOrphanBackends(): Promise<void> {
+  const cmd =
+    process.platform === 'win32'
+      ? 'taskkill /F /IM backnote-backend.exe'
+      : 'pkill -9 -x backnote-backend'
+  try {
+    await execAsync(cmd)
+  } catch {
+    // 該当プロセスが無ければ非0 で返る。正常系。
+  }
+}
+
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     let resolved = false
@@ -109,6 +126,10 @@ export async function startBackend(port: number = BACKEND_PORT): Promise<void> {
 
   // 前回のバックエンドが孤児として残っているケースに備えて port が空くのを待つ。
   // 空かないまま spawn すると bind 失敗で log.Fatalf → exit ハンドラがダイアログを出してしまう。
+  if (await isPortInUse(port)) {
+    // 孤児バックエンドを kill してから空くのを待つ。
+    await killOrphanBackends()
+  }
   await waitForPortFree(port)
 
   intentionalShutdown = false
