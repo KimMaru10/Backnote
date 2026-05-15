@@ -97,12 +97,24 @@ app.whenReady().then(async () => {
   })
 })
 
-app.on('before-quit', () => {
+let isQuittingInProgress = false
+
+app.on('before-quit', (event) => {
   ;(app as unknown as { isQuiting: boolean }).isQuiting = true
+  if (isQuittingInProgress) return
+  isQuittingInProgress = true
+
   stopTray()
   destroyTrayPopover()
   stopNotifier()
-  stopBackend()
+
+  // stopBackend の HTTP graceful shutdown 完了を待ってから app.quit() する。
+  // これを待たないと requestShutdown が in-flight のままプロセスが落ち、
+  // バックエンドの DB/Syncer クリーンアップが走らない。
+  event.preventDefault()
+  void stopBackend().finally(() => {
+    app.quit()
+  })
 })
 
 // Tray 常駐するため window-all-closed では quit しない。

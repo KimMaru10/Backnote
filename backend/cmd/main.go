@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/KimMaru10/Backnote/backend/internal/handler"
@@ -12,6 +17,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+const shutdownTimeout = 5 * time.Second
 
 func main() {
 	homeDir, err := os.UserHomeDir()
@@ -60,6 +67,9 @@ func main() {
 	e.Server.WriteTimeout = 60 * time.Second
 	e.Server.IdleTimeout = 120 * time.Second
 
+	shutdownCh := make(chan struct{}, 1)
+	shutdownHandler := handler.NewShutdownHandler(shutdownCh, os.Getenv("BACKNOTE_SHUTDOWN_TOKEN"))
+
 	healthHandler := handler.NewHealthHandler()
 	syncHandler := handler.NewSyncHandler(db, syncer)
 	spaceHandler := handler.NewSpaceHandler(db, syncer, writer)
@@ -76,6 +86,7 @@ func main() {
 
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.HealthCheck)
+	api.POST("/shutdown", shutdownHandler.Shutdown)
 	api.GET("/tasks/:id", taskHandler.GetTask)
 	api.GET("/tasks/:id/memos", taskHandler.GetMemos)
 	api.POST("/tasks/:id/memos", taskHandler.AddMemo)
@@ -108,8 +119,32 @@ func main() {
 	api.POST("/focus/:taskId/complete", focusHandler.Complete)
 	api.DELETE("/focus/:taskId", focusHandler.Remove)
 
-	log.Printf("Backnote backend starting on :%s", port)
-	if err := e.Start(":" + port); err != nil {
-		log.Fatalf("server: %v", err)
+	go func() {
+		log.Printf("Backnote backend starting on :%s", port)
+		if err := e.Start(":" + port); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("server: %v", err)
+		}
+	}()
+
+	// Electron からの /api/shutdown 通知、または OS シグナル（開発時の Ctrl+C）で graceful shutdown する。
+	// defer の writer.Stop / syncer.Stop が確実に走る経路を作るのが目的。
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case <-shutdownCh:
+		log.Println("shutdown requested via HTTP")
+	case sig := <-sigCh:
+		log.Printf("signal received: %s", sig)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("server shutdown timed out after %s, forcing stop", shutdownTimeout)
+		} else {
+			log.Printf("server shutdown error: %v", err)
+		}
 	}
 }
